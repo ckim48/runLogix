@@ -122,65 +122,154 @@
         margin: 10px auto 0;
         border-radius: 2px;
     }
+    /* Styling for leaderboard rows */
+.top-row {
+    background-color: #4caf50 !important; /* Highlight for first place */
+    font-weight: bold;
+    color: #fff;
+}
+
+.second-row {
+    background-color: #2196f3 !important; /* Highlight for first place */
+    font-weight: bold;
+    color: #fff;
+}
+
+.third-row {
+    background-color: #ff9800 !important; /* Highlight for first place */
+    font-weight: bold;
+    color: #fff;
+}
+.rank-icon {
+    font-size: 1.2rem;
+    vertical-align: middle;
+    margin-right: 8px;
+    color: gold; /* You can adjust the color based on rank */
+}
+
 </style>
 <div class="container mt-5">
-    <h2 class="section-title" data-aos="fade-up">{{username}}'s Team</h2>
+    <h2 class="section-title" data-aos="fade-up">Hello, {{ fullname }}</h2>
+
+    {% if role == 'Manager' %}
     <div class="text-center mb-4" data-aos="fade-up" data-aos-delay="100">
         <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addMemberModal">Add Member</button>
     </div>
-    <div class="row" id="team-members">
-        {% for member in team_members %}
-        <div class="col-md-4 mb-4" data-aos="zoom-in" data-aos-delay="{{ loop.index * 100 }}">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <div class="profile-image">
-                        <img src="{{ url_for('static', filename='images/profiles/' ~ member.image) if member.image else url_for('static', filename='images/profile.webp') }}" alt="Profile Image">
-                    </div>
-                    <h5 class="card-title">{{ member.name }}</h5>
-                    <p class="card-text"><strong>Role:</strong> {{ member.role }}</p>
-                    <p class="card-text"><strong>Email:</strong> {{ member.email }}</p>
-                    <a href="{{ url_for('view_member', member_id=member.id) }}" class="btn mt-3">More Details</a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
+    {%else%}
+        <div class="text-center mb-4" data-aos="fade-up" data-aos-delay="100">
+
+<a href="{{ url_for('view_member', member_id=member_id) }}" class="btn mb-4">Track My Record</a>
+</div>
+    {% endif %}
+
+
+<div class="row" id="team-members">
+    <!-- Members will be loaded here dynamically -->
+</div>
+<div class="text-center mt-4">
+    <button id="view-more" class="btn btn-primary" data-page="1">View More</button>
+</div>
+
 </div>
 
 <div class="container mt-5">
-    <h2 class="section-title" data-aos="fade-up">Team Management Dashboard</h2>
-    <div class="row g-4">
-        <div class="col-md-6" data-aos="fade-right">
-            <div class="chart-card">
+    <h3 class="text-center mb-4">Leaderboards</h3>
+    <div class="row">
+        <!-- Total Distance Ran Leaderboard -->
+        <div class="col-lg-6">
+            <div class="card">
                 <div class="card-body">
-                    <h5 class="chart-card-title text-center">Role Distribution</h5>
-                    <canvas id="roleChart" width="200" height="200"></canvas>
+                    <h5 class="card-title text-center">Total Distance Ran</h5>
+                    <table class="table table-dark table-striped mt-3">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Name</th>
+                                <th>Distance (km)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="totalDistanceLeaderboard">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-        <div class="col-md-6" data-aos="fade-left">
-            <div class="chart-card">
+
+        <!-- This Month's Distance Leaderboard -->
+        <div class="col-lg-6">
+            <div class="card">
                 <div class="card-body">
-                    <h5 class="chart-card-title text-center">Drill Activity Over Time</h5>
-                    <canvas id="drillChart" width="200" height="200"></canvas>
+                    <h5 class="card-title text-center">This Month's Distance</h5>
+                    <table class="table table-dark table-striped mt-3">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Name</th>
+                                <th>Distance (km)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlyDistanceLeaderboard">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
-    <div class="row g-4 mt-4">
-        <div class="col-md-6" data-aos="fade-right" data-aos-delay="200">
-            <div class="chart-card">
-                <div class="card-body">
-                    <h5 class="chart-card-title text-center">Average Drill Duration</h5>
-                    <canvas id="durationChart" width="200" height="200"></canvas>
+</div>
+
+
+
+<div class="container mt-5">
+    <h3 class="text-center mb-4">Team Performance Dashboard</h3>
+    <div class="row">
+        <!-- Progress Over Time Chart -->
+        <div class="col-lg-6 d-flex align-items-stretch">
+            <div class="card w-100">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center p-3">
+                    <h5 class="card-title text-center">Progress Over Time</h5>
+                    <div class="w-100" style="max-width: 90%; height: 350px; display: flex; justify-content: center; align-items: center;">
+                        <canvas id="progressChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6" data-aos="fade-left" data-aos-delay="200">
-            <div class="chart-card">
-                <div class="card-body">
-                    <h5 class="chart-card-title text-center">Best Scores Analysis</h5>
-                    <canvas id="scoreChart" width="200" height="200"></canvas>
+
+        <!-- Drill Distribution Chart -->
+        <div class="col-lg-6 d-flex align-items-stretch">
+            <div class="card w-100">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center p-3">
+                    <h5 class="card-title text-center">Drill Distribution</h5>
+                    <div class="w-100" style="max-width: 90%; height: 350px; display: flex; justify-content: center; align-items: center;">
+                        <canvas id="drillDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Top Performers Chart -->
+        <div class="col-lg-6 d-flex align-items-stretch">
+            <div class="card w-100">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center p-3">
+                    <h5 class="card-title text-center">Top Performers</h5>
+                    <div class="w-100" style="max-width: 90%; height: 350px; display: flex; justify-content: center; align-items: center;">
+                        <canvas id="topPerformersChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goal Completion Chart -->
+        <div class="col-lg-6 d-flex align-items-stretch">
+            <div class="card w-100">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center p-3">
+                    <h5 class="card-title text-center">Goal Completion</h5>
+                    <div class="w-100" style="max-width: 90%; height: 350px; display: flex; justify-content: center; align-items: center;">
+                        <canvas id="goalCompletionChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -270,128 +359,212 @@ document.getElementById('addMemberForm').addEventListener('submit', async functi
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
     async function fetchChartData() {
         const response = await fetch('/chart-data');
         const data = await response.json();
 
-        const commonOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    labels: {
-                        color: '#fff' // White text for legend
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: { color: '#fff' }, // White text for x-axis labels
-                    grid: { color: '#444' }  // Light gray grid lines
-                },
-                y: {
-                    ticks: { color: '#fff' }, // White text for y-axis labels
-                    grid: { color: '#444' }  // Light gray grid lines
-                }
-            }
-        };
-
-        // Role Distribution Chart
-        const roleCtx = document.getElementById('roleChart').getContext('2d');
-        new Chart(roleCtx, {
-            type: 'pie',
-            data: {
-                labels: data.role_data.map(item => item.role),
-                datasets: [{
-                    data: data.role_data.map(item => item.count),
-                    backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56']
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: '#fff' // White text for legend
-                        }
-                    }
-                }
-            }
-        });
-
-        // Drill Activity Chart
-        const drillCtx = document.getElementById('drillChart').getContext('2d');
-        new Chart(drillCtx, {
+        // Progress Over Time Chart
+        const progressCtx = document.getElementById('progressChart').getContext('2d');
+        new Chart(progressCtx, {
             type: 'line',
             data: {
-                labels: data.drill_data.map(item => item.date),
+                labels: data.progress_over_time.weeks,
                 datasets: [{
-                    label: 'Drills Over Time',
-                    data: data.drill_data.map(item => item.count),
-                    borderColor: '#36a2eb',
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    label: 'Distance (km)',
+                    data: data.progress_over_time.distances,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
                     fill: true
                 }]
             },
-            options: commonOptions
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { ticks: { color: '#fff' }, grid: { color: '#555' } },
+                    y: { ticks: { color: '#fff' }, grid: { color: '#555' } }
+                }
+            }
         });
 
-        // Average Drill Duration Chart
-        const durationCtx = document.getElementById('durationChart').getContext('2d');
-        new Chart(durationCtx, {
+        // Drill Distribution Chart
+        const drillCtx = document.getElementById('drillDistributionChart').getContext('2d');
+        new Chart(drillCtx, {
             type: 'bar',
             data: {
-                labels: data.duration_data.map(item => item.name),
+                labels: data.drill_distribution.drills,
                 datasets: [{
-                    label: 'Average Duration (min)',
-                    data: data.duration_data.map(item => item.avg_duration),
-                    backgroundColor: '#ffce56'
-                }]
-            },
-            options: commonOptions
-        });
-
-        // Best Scores Chart
-        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
-        new Chart(scoreCtx, {
-            type: 'scatter',
-            data: {
-                datasets: [{
-                    label: 'Best Scores',
-                    data: data.score_data.map(item => ({ x: item.distance, y: item.time })),
-                    backgroundColor: '#ff6384'
+                    data: data.drill_distribution.counts,
+                    backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56', '#4bc0c0'],
+                    borderColor: '#333',
+                    borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
                 plugins: {
-                    legend: {
-                        labels: {
-                            color: '#fff'
-                        }
-                    }
+                    legend: { display: false }
                 },
                 scales: {
-                    x: {
-                        title: { display: true, text: 'Distance (m)', color: '#fff' },
-                        ticks: { color: '#fff' },
-                        grid: { color: '#444' }
-                    },
-                    y: {
-                        title: { display: true, text: 'Time (min)', color: '#fff' },
-                        ticks: { color: '#fff' },
-                        grid: { color: '#444' }
-                    }
+                    x: { ticks: { color: '#fff' }, grid: { color: '#555' } },
+                    y: { ticks: { color: '#fff' }, grid: { color: '#555' } }
+                }
+            }
+        });
+
+        // Top Performers Chart
+        const performersCtx = document.getElementById('topPerformersChart').getContext('2d');
+        new Chart(performersCtx, {
+            type: 'bar',
+            data: {
+                labels: data.top_performers.names,
+                datasets: [{
+                    label: 'Total Distance (km)',
+                    data: data.top_performers.distances,
+                    backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { ticks: { color: '#fff' }, grid: { color: '#555' } },
+                    y: { ticks: { color: '#fff' }, grid: { color: '#555' } }
+                }
+            }
+        });
+
+        // Goal Completion Chart
+        const goalCtx = document.getElementById('goalCompletionChart').getContext('2d');
+        new Chart(goalCtx, {
+            type: 'bar',
+            data: {
+                labels: data.goal_completion.names,
+                datasets: [{
+                    label: 'Goal Completion (%)',
+                    data: data.goal_completion.percentages,
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { ticks: { color: '#fff' }, grid: { color: '#555' } },
+                    y: { ticks: { color: '#fff' }, grid: { color: '#555' } }
                 }
             }
         });
     }
 
-    // Fetch and render charts on page load
     fetchChartData();
 </script>
 
+
+<script>
+    async function fetchLeaderboards() {
+        const response = await fetch('/leader-data');
+        const data = await response.json();
+// Populate Total Distance Leaderboard
+const totalDistanceLeaderboard = document.getElementById('totalDistanceLeaderboard');
+data.top_performers.names.forEach((name, index) => {
+    let rankIcon = '';
+    if (index === 0) rankIcon = '<i class="bi bi-trophy-fill text-warning rank-icon"></i>';
+    else if (index === 1) rankIcon = '<i class="bi bi-award-fill text-secondary rank-icon"></i>';
+    else if (index === 2) rankIcon = '<i class="bi bi-star-fill text-warning rank-icon"></i>';
+
+    const row = `
+        <tr>
+            <td>${rankIcon}${index + 1}</td>
+            <td>${name}</td>
+            <td>${data.top_performers.distances[index].toFixed(2)}</td>
+        </tr>
+    `;
+    totalDistanceLeaderboard.insertAdjacentHTML('beforeend', row);
+});
+
+// Populate This Month's Distance Leaderboard
+const monthlyDistanceLeaderboard = document.getElementById('monthlyDistanceLeaderboard');
+data.monthly_top_performers.names.forEach((name, index) => {
+    let rankIcon = '';
+    if (index === 0) rankIcon = '<i class="bi bi-trophy-fill text-warning rank-icon"></i>';
+    else if (index === 1) rankIcon = '<i class="bi bi-award-fill text-secondary rank-icon"></i>';
+    else if (index === 2) rankIcon = '<i class="bi bi-star-fill text-warning rank-icon"></i>';
+
+    const row = `
+        <tr>
+            <td>${rankIcon}${index + 1}</td>
+            <td>${name}</td>
+            <td>${data.monthly_top_performers.distances[index].toFixed(2)}</td>
+        </tr>
+    `;
+    monthlyDistanceLeaderboard.insertAdjacentHTML('beforeend', row);
+});
+
+    }
+
+    fetchLeaderboards();
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const teamMembersContainer = document.getElementById('team-members');
+    const viewMoreButton = document.getElementById('view-more');
+
+    async function loadMembers(page) {
+        try {
+            const response = await fetch(`/team_members?page=${page}&limit=6`);
+            const data = await response.json();
+
+            // Append members to the container
+            data.members.forEach(member => {
+                const memberHTML = `
+                    <div class="col-md-4 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="profile-image">
+                                    <img src="/static/images/profiles/${member.image || 'profile.webp'}" alt="Profile Image">
+                                </div>
+                                <h5 class="card-title">${member.name}</h5>
+                                <p class="card-text"><strong>Role:</strong> ${member.role}</p>
+                                <p class="card-text"><strong>Email:</strong> ${member.email}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                teamMembersContainer.insertAdjacentHTML('beforeend', memberHTML);
+            });
+
+            // Update the button state
+            if (!data.has_more) {
+                viewMoreButton.style.display = 'none'; // Hide button if no more members
+            }
+        } catch (error) {
+            console.error('Error loading members:', error);
+        }
+    }
+
+    // Load the initial set of members
+    loadMembers(1);
+
+    // Add click event for "View More"
+    viewMoreButton.addEventListener('click', () => {
+        const nextPage = parseInt(viewMoreButton.dataset.page) + 1;
+        loadMembers(nextPage);
+        viewMoreButton.dataset.page = nextPage; // Update to the next page
+    });
+});
+</script>
+
 {% endblock %}

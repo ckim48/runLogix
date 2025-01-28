@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>RunLogic</title>
+  <meta content="" name="description">
+  <meta content="" name="keywords">
+
+  <!-- Favicons -->
+  <link href="assets/img/favicon.png" rel="icon">
+  <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Raleway:300,300i,400,400i,500,500i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
+
+  <!-- Vendor CSS Files -->
+<link href="https://cdn.jsdelivr.net/npm/aos@3.0.0-beta.6/dist/aos.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/glightbox@3.0.9/dist/css/glightbox.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/swiper@9.4.5/swiper-bundle.min.css" rel="stylesheet">
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+
+  <!-- Template Main CSS File -->
+  <link href="../static/style.css" rel="stylesheet">
+
+<style>
+/*.card {*/
+/*  transition: transform 0.3s ease, box-shadow 0.3s ease;*/
+/*}*/
+
+/*.card:hover {*/
+/*  transform: scale(1.05) !important;*/
+/*  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3) !important;*/
+/*}*/
+</style>
+</head>
+
+<body>
+
+  <!-- ======= Header ======= -->
+  <header id="header" class="fixed-top header-transparent">
+    <div class="container d-flex align-items-center justify-content-between position-relative">
+
+      <div class="logo">
+        <h1 class="text-light"><a href="index.html">RunLogic</a></h1>
+        <!-- Uncomment below if you prefer to use an image logo -->
+        <!-- <a href="index.html"><img src="assets/img/logo.png" alt="" class="img-fluid"></a>-->
+      </div>
+
+      <nav id="navbar" class="navbar">
+        <ul>
+          <li><a class="nav-link scrollto" href="#about">About Us</a></li>
+          <li><a class="nav-link scrollto" href="#deliverables">Features</a></li>
+                <li>
+<a href="{{url_for('main')}}"
+   class="btn"
+   target="_blank"
+   style="
+      background-color: #4CAF50; /* Default green color */
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 25px;
+      text-decoration: none;
+      transition: background-color 0.3s ease, color 0.3s ease;
+   "
+   onmouseover="this.style.backgroundColor='#45a049'; this.style.color='#f9f9f9';"
+   onmouseout="this.style.backgroundColor='#4CAF50'; this.style.color='#fff';">
+   Start Tracking
+</a>
+    </li>
+        </ul>
+        <i class="bi bi-list mobile-nav-toggle"></i>
+      </nav><!-- .navbar -->
+
+    </div>
+  </header><!-- End Header -->
+
+  <!-- ======= Hero Section ======= -->
+  <section id="hero">
+    <div class="hero-container" data-aos="fade-up">
+      <h1 class="mb-4">RunLogic</h1>
+        <h2>Track training drills, monitor progress, and achieve your personal best</h2>
+      <a href="#about" class="btn-get-started scrollto">Learn More</a>
+    </div>
+  </section><!-- End Hero -->
+
+  <main id="main">
+   <section id="about" class="section dfbg">
+    <div class="container section-title" data-aos="fade-up">
+        <h2>About RunLogic</h2>
+    </div><!-- End Section Title -->
+
+    <div class="container">
+        <div class="row gy-4">
+            <div class="col-lg-6 order-1 order-lg-2" data-aos="fade-left" data-aos-delay="100">
+                <img src="../static/images/about1.jpg" class="img-fluid d-block mx-auto aboutimg2" alt="">
+            </div>
+            <div class="col-lg-6 order-2 order-lg-1 content" data-aos="fade-right" data-aos-delay="100">
+                <p class="text-justify">
+                    <strong>RunLogic</strong> is designed to help individuals track their training drills, monitor progress, and achieve personal fitness goals.
+                    Whether you're preparing for a race, enhancing endurance, or improving speed, RunLogic provides a seamless platform to document drills and view performance insights.
+                    By logging your efforts and seeing your growth, you can stay motivated and focused on reaching your best self. With <strong>customizable drill tracking</strong> and
+                    <strong>progress evaluation</strong>, RunLogic makes personal goal-setting and achievement effortless.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr>
+   <section id="deliverables" class="deliverables-section dark-bg">
+  <div class="container">
+    <div class="section-title" data-aos="fade-in" data-aos-delay="100">
+      <h2>Our Features</h2>
+      <p>Discover the powerful tools and functionalities RunLogic offers to help you achieve your fitness goals and track your progress effectively.</p>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 d-flex align-items-stretch">
+        <div class="card" data-aos="fade-up" data-aos-delay="100">
+          <img src="../static/images/f1.jpg" class="card-img-top" alt="Track Training Drills">
+          <div class="card-body">
+            <h5 class="card-title">Track Training Drills</h5>
+            <p class="card-text">Easily log your training drills, including details like type, duration, and date, to keep track of your efforts.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 d-flex align-items-stretch">
+        <div class="card" data-aos="fade-up" data-aos-delay="200">
+          <img src="../static/images/f2.jpg" class="card-img-top" alt="Monitor Your Progress">
+          <div class="card-body">
+            <h5 class="card-title">Monitor Your Progress</h5>
+            <p class="card-text">View detailed insights into your performance, track improvements over time, and stay motivated with your achievements.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 d-flex align-items-stretch">
+        <div class="card" data-aos="fade-up" data-aos-delay="300">
+          <img src="../static/images/f3.jpg" class="card-img-top" alt="Get Drill Recommendations">
+          <div class="card-body">
+            <h5 class="card-title">Get Drill Recommendations</h5>
+            <p class="card-text">Leverage intelligent suggestions to plan your next training drills based on past performance and fitness goals.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<hr>
+
+
+<!-- ======= Cta Section ======= -->
+<section id="cta" class="cta">
+
+
+
+<div class="container" data-aos="zoom-in">
+
+    <div class="text-center">
+        <h3>Track Your Training Progress</h3>
+        <p>Gain real-time insights into your performance, monitor your training drills, and stay motivated as you achieve your fitness goals. Our user-friendly platform helps you stay on track effortlessly.</p>
+        <a class="cta-btn" href="{{url_for('main')}}">Get Started</a>
+    </div>
+
+</div>
+
+</section><!-- End Cta Section -->
+
+
+
+  </main><!-- End #main -->
+
+
+
+  <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
+
+  <!-- Vendor JS Files -->
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/purecounterjs@1.4.0/dist/purecounter_vanilla.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/aos@3.0.0-beta.6/dist/aos.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/glightbox@3.0.9/dist/js/glightbox.min.js"></script>
+<script src="https://unpkg.com/isotope-layout@3.0.6/dist/isotope.pkgd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/swiper@9.4.5/swiper-bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/php-email-form/validate.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+  <!-- Template Main JS File -->
+  <script src="../static/main.js"></script>
+  <script>
+(function() {
+  emailjs.init("27QgP0uQsaxgso0ls");
+})();
+
+
+
+document.getElementById("demo-request-form2").addEventListener("submit", function(event) {
+  event.preventDefault();
+  const name = this.querySelector('input[name="name"]').value;
+  const email = this.querySelector('input[name="email"]').value;
+  const school = this.querySelector('input[name="school"]').value;
+
+  const messageInput = this.querySelector('input[name="message"]');
+  messageInput.value = `Name: ${name}\nEmail: ${email}\nSchool: ${school}`;
+  const subjectInput = this.querySelector('input[name="subject"]');
+  subjectInput.value = `Requesting Demo`;
+
+
+  const serviceID = 'service_rglla1a';
+  const templateID = 'template_19ra51l';
+
+  emailjs.sendForm(serviceID, templateID, this)
+    .then(() => {
+      // Show success modal
+      new bootstrap.Modal(document.getElementById('successModal')).show();
+
+      // Close request demo modal
+      const requestDemoModal = bootstrap.Modal.getInstance(document.getElementById('requestDemoModal'));
+      requestDemoModal.hide();
+
+      this.reset();
+    }, (err) => {
+      document.querySelector('.error-message').innerHTML = JSON.stringify(err);
+      document.querySelector('.error-message').style.display = 'block';
+    });
+});
+
+  </script>
+</body>
+
+</html>

@@ -9,7 +9,6 @@ app.secret_key = 'your_secret_key'
 UPLOAD_FOLDER = 'static/images/profiles'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -125,27 +124,34 @@ def get_recommendation(member_id):
     conn = get_db_connection()
     member = conn.execute('SELECT * FROM team_members WHERE id = ?', (member_id,)).fetchone()
     drills = conn.execute('SELECT * FROM training_drills WHERE member_id = ?', (member_id,)).fetchall()
+    total_distance = conn.execute('''
+        SELECT SUM(distance) AS total_distance
+        FROM best_scores
+        WHERE member_id = ?
+    ''', (member_id,)).fetchone()['total_distance'] or 0
     conn.close()
 
     if not member:
         return {"recommendation": "Member not found"}, 404
 
-    # Prepare drill history for GPT
-    if drills:
-        drill_history = "\n".join([f"{drill['date']}: {drill['drill']} for {drill['duration']} minutes" for drill in drills])
-        prompt = f"""
-        The following is the drill history of a team member named {member['name']}:
-        {drill_history}
+    # Calculate goal progress percentage
+    goal_target = member['goal_target'] or 0
+    progress_percentage = (total_distance / goal_target) * 100 if goal_target > 0 else 0
 
-        Based on this history, suggest a drill for the next session. Provide a concise explanation for your recommendation.
-        """
-    else:
-        # No drill history available
-        prompt = f"""
-        There is no historical data for the team member named {member['name']}. 
+    # Prepare drill history and progress for GPT
+    drill_history = "\n".join([f"{drill['date']}: {drill['drill']} for {drill['duration']} minutes" for drill in drills]) or "No historical data available."
+    goal_progress_info = f"Current progress: {total_distance} km out of {goal_target} km ({progress_percentage:.1f}%)."
 
-        Suggest a beginner drill for their next session. Mention that more data is needed for better recommendations.
-        """
+    # Construct the GPT prompt
+    prompt = f"""
+    Here is the historical drill data and goal progress for a team member:
+    Drill History:
+    {drill_history}
+
+    {goal_progress_info}
+
+    Based on this, suggest a drill for the next session. Provide a concise explanation for your recommendation. Use two bullet points for two recommendation, each with a maximum of two sentences.
+    """
 
     # Generate a recommendation using GPT
     try:
@@ -166,8 +172,24 @@ def get_recommendation(member_id):
         recommendation += " Note: More data is needed to provide tailored recommendations in the future."
 
     return {"recommendation": recommendation}
+
+@app.route('/set_goal/<int:member_id>', methods=['POST'])
+def set_goal(member_id):
+    new_goal = request.form['goal']
+    conn = get_db_connection()
+    conn.execute('UPDATE team_members SET goal_target = ? WHERE id = ?', (new_goal, member_id))
+    conn.commit()
+    conn.close()
+    flash('Goal updated successfully!', 'success')
+    return redirect(url_for('view_member', member_id=member_id))
+
 @app.route('/')
 def index():
+    return render_template('landing.html')
+
+
+@app.route('/main')
+def main():
     if 'user_id' not in session:
         flash('Please log in to access the dashboard.', 'warning')
         return redirect(url_for('login'))
@@ -175,88 +197,141 @@ def index():
     conn = get_db_connection()
 
     try:
-        # Check if the user is a team member
-        user_role = session.get('role')
-        if user_role == 'Member':
-            # Get the corresponding member ID from the team_members table
-            member = conn.execute(
-                'SELECT id FROM team_members WHERE email = (SELECT email FROM users WHERE id = ?) LIMIT 1',
-                (session['user_id'],)
-            ).fetchone()
+        # Fetch the full name and role of the logged-in user
+        user = conn.execute('SELECT fullname, role FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+        if not user:
+            flash('User not found. Please log in again.', 'danger')
+            return redirect(url_for('login'))
 
-            if member:
-                # Redirect the user to their `view_member` page
-                return redirect(url_for('view_member', member_id=member['id']))
-            else:
-                flash('No associated team member account found.', 'danger')
-                return redirect(url_for('login'))
+        fullname = user['fullname']
+        role = user['role']
 
-        # For managers, proceed to the index page
-        team_members = conn.execute(
-            'SELECT * FROM team_members WHERE user_id = ?',
-            (session['user_id'],)
-        ).fetchall()
-        return render_template('index.html', username=session['user_name'], team_members=team_members)
+        # If the user is a team member, get their corresponding member ID
+        member_id = None
+        if role == 'Member':
+            member = conn.execute('SELECT id FROM users WHERE name = ?', (session['user_name'],)).fetchone()
+            member_id = member['id'] if member else None
+            print(member_id)
+        # Fetch all team members from the database
+        team_members = conn.execute('SELECT * FROM team_members').fetchall()
+
+        return render_template('index.html', fullname=fullname, role=role, member_id=member_id, team_members=team_members)
 
     finally:
         conn.close()
-
-
 @app.route('/chart-data', methods=['GET'])
 def chart_data():
-    if 'user_id' not in session:
-        return jsonify({'error': 'User not logged in'}), 403
-
-    user_id = session['user_id']
     conn = get_db_connection()
 
-    # Data for Role Distribution (Filtered by user)
-    roles = conn.execute('''
-        SELECT role, COUNT(*) as count 
-        FROM team_members 
-        WHERE user_id = ? 
-        GROUP BY role
-    ''', (user_id,)).fetchall()
-    role_data = [{'role': row['role'], 'count': row['count']} for row in roles]
+    # Progress Over Time (Sum of weekly distances for all members)
+    progress_data = conn.execute('''
+        SELECT strftime('%Y-%W', date) as week, SUM(distance) as total_distance
+        FROM best_scores
+        GROUP BY week
+        ORDER BY week
+    ''').fetchall()
 
-    # Data for Drill Activity Over Time (Filtered by user's team members)
-    drills = conn.execute('''
-        SELECT date, COUNT(*) as count 
-        FROM training_drills 
-        WHERE member_id IN (
-            SELECT id FROM team_members WHERE user_id = ?
-        ) 
-        GROUP BY date 
-        ORDER BY date
-    ''', (user_id,)).fetchall()
-    drill_data = [{'date': row['date'], 'count': row['count']} for row in drills]
+    progress_over_time = {
+        'weeks': [row['week'] for row in progress_data],
+        'distances': [row['total_distance'] for row in progress_data]
+    }
 
-    # Data for Average Drill Duration by Member (Filtered by user's team members)
-    durations = conn.execute('''
-        SELECT tm.name, AVG(td.duration) as avg_duration 
-        FROM training_drills td 
-        JOIN team_members tm ON td.member_id = tm.id 
-        WHERE tm.user_id = ? 
+    # Drill Distribution
+    drill_data = conn.execute('''
+        SELECT drill, COUNT(*) as count
+        FROM training_drills
+        GROUP BY drill
+    ''').fetchall()
+
+    drill_distribution = {
+        'drills': [row['drill'] for row in drill_data],
+        'counts': [row['count'] for row in drill_data]
+    }
+
+    # Top Performers
+    top_performers = conn.execute('''
+        SELECT tm.name, SUM(bs.distance) as total_distance
+        FROM best_scores bs
+        JOIN team_members tm ON bs.member_id = tm.id
         GROUP BY tm.name
-    ''', (user_id,)).fetchall()
-    duration_data = [{'name': row['name'], 'avg_duration': row['avg_duration']} for row in durations]
+        ORDER BY total_distance DESC
+        LIMIT 5
+    ''').fetchall()
 
-    # Data for Best Scores Analysis (Filtered by user's team members)
-    scores = conn.execute('''
-        SELECT tm.name, bs.distance, bs.time 
-        FROM best_scores bs 
-        JOIN team_members tm ON bs.member_id = tm.id 
-        WHERE tm.user_id = ?
-    ''', (user_id,)).fetchall()
-    score_data = [{'name': row['name'], 'distance': row['distance'], 'time': row['time']} for row in scores]
+    top_performers_data = {
+        'names': [row['name'] for row in top_performers],
+        'distances': [row['total_distance'] for row in top_performers]
+    }
+
+    # Goal Completion
+    goal_completion = conn.execute('''
+        SELECT tm.name, tm.goal_target, COALESCE(SUM(bs.distance), 0) as total_distance
+        FROM team_members tm
+        LEFT JOIN best_scores bs ON tm.id = bs.member_id
+        GROUP BY tm.id
+    ''').fetchall()
+
+    goal_completion_data = {
+        'names': [row['name'] for row in goal_completion],
+        'percentages': [
+            (row['total_distance'] / row['goal_target']) * 100 if row['goal_target'] > 0 else 0
+            for row in goal_completion
+        ]
+    }
 
     conn.close()
+
     return jsonify({
-        'role_data': role_data,
-        'drill_data': drill_data,
-        'duration_data': duration_data,
-        'score_data': score_data
+        'progress_over_time': progress_over_time,
+        'drill_distribution': drill_distribution,
+        'top_performers': top_performers_data,
+        'goal_completion': goal_completion_data
     })
+
+@app.route('/leader-data', methods=['GET'])
+def leader_data():
+    conn = get_db_connection()
+
+    # Total Distance Leaderboard
+    top_performers = conn.execute('''
+        SELECT tm.name, SUM(bs.distance) as total_distance
+        FROM best_scores bs
+        JOIN team_members tm ON bs.member_id = tm.id
+        GROUP BY tm.name
+        ORDER BY total_distance DESC
+        LIMIT 5
+    ''').fetchall()
+
+    total_top_performers = {
+        'names': [row['name'] for row in top_performers],
+        'distances': [row['total_distance'] for row in top_performers]
+    }
+
+    # Monthly Distance Leaderboard
+    current_month = conn.execute('SELECT strftime("%Y-%m", "now")').fetchone()[0]
+    monthly_performers = conn.execute('''
+        SELECT tm.name, SUM(bs.distance) as total_distance
+        FROM best_scores bs
+        JOIN team_members tm ON bs.member_id = tm.id
+        WHERE strftime("%Y-%m", bs.date) = ?
+        GROUP BY tm.name
+        ORDER BY total_distance DESC
+        LIMIT 5
+    ''', (current_month,)).fetchall()
+
+    monthly_top_performers = {
+        'names': [row['name'] for row in monthly_performers],
+        'distances': [row['total_distance'] for row in monthly_performers]
+    }
+
+    conn.close()
+
+    return jsonify({
+        'top_performers': total_top_performers,
+        'monthly_top_performers': monthly_top_performers,
+        # Include other data as necessary
+    })
+
 
 @app.route('/add_drill/<int:member_id>', methods=['GET', 'POST'])
 def add_drill(member_id):
@@ -272,8 +347,6 @@ def add_drill(member_id):
         return redirect(url_for('view_member', member_id=member_id))
     conn.close()
     return render_template('add_drill.html', member_id=member_id)
-
-
 @app.route('/view_member/<int:member_id>')
 def view_member(member_id):
     conn = get_db_connection()
@@ -288,10 +361,49 @@ def view_member(member_id):
         ORDER BY distance, time ASC
     ''', (member_id,)).fetchall()
 
+    # Calculate progress data
+    progress_dates = [row['date'] for row in drills] if drills else []
+    progress_values = [row['duration'] for row in drills] if drills else []
+
+    # Drill distribution data
+    drill_types = ['Endurance', 'Speed Training', 'Hill Repeats', 'Interval Training']
+    drill_counts = [
+        sum(1 for drill in drills if drill['drill'] == dtype)
+        for dtype in drill_types
+    ]
+
     conn.close()
     if not member:
         return "Member not found", 404
-    return render_template('view_member.html', member=member, drills=drills, best_scores=best_scores)
+
+    return render_template(
+        'view_member.html',
+        member=member,
+        drills=drills,
+        best_scores=best_scores,
+        total_distance=sum(row['distance'] for row in best_scores),
+        progress_dates=progress_dates,
+        progress_values=progress_values,
+        drill_types=drill_types,
+        drill_counts=drill_counts
+    )
+
+
+@app.route('/update_progress/<int:member_id>', methods=['POST'])
+def update_progress(member_id):
+    new_progress = request.form['goal_progress']
+    new_target = request.form['goal_target']
+
+    conn = get_db_connection()
+    conn.execute(
+        'UPDATE team_members SET goal_progress = ?, goal_target = ? WHERE id = ?',
+        (new_progress, new_target, member_id)
+    )
+    conn.commit()
+    conn.close()
+
+    flash('Progress updated successfully!', 'success')
+    return redirect(url_for('view_member', member_id=member_id))
 
 @app.route('/manage_team', methods=['GET', 'POST'])
 def manage_team():
@@ -361,7 +473,6 @@ def add_score(member_id):
         conn.close()
         return redirect(url_for('view_member', member_id=member_id))
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -375,55 +486,58 @@ def login():
             if user:
                 session['user_id'] = user['id']
                 session['user_name'] = user['name']
-                session['role'] = user['role']
 
-                # Check if the user is a member
-                if user['role'] == 'Member':
-                    # Verify the member's email in the team_members table
-                    member = conn.execute(
-                        'SELECT * FROM team_members WHERE email = (SELECT email FROM users WHERE id = ?) LIMIT 1',
-                        (user['id'],)
-                    ).fetchone()
-
-                    if member:
-                        # Redirect to the corresponding view_member page
-                        flash('Login successful!', 'success')
-                        return redirect(url_for('view_member', member_id=member['id']))
-                    else:
-                        flash('You are not associated with a team member account.', 'danger')
-                        return redirect(url_for('login'))
-
-                # If the user is a manager, redirect to the index page
+                # Redirect all users to the main page
                 flash('Login successful!', 'success')
-                return redirect(url_for('index'))
+                return redirect(url_for('main'))
             else:
                 flash('Invalid username or password', 'danger')
         finally:
             conn.close()
 
     return render_template('login.html')
-
+import time
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        name = request.form['name']
+        username = request.form['name']
+        fullname = request.form['fullname']
         email = request.form['email']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
-        role = request.form['role']
+        profile_image = request.files['profile_image']
 
+        # Check if passwords match
         if password != confirm_password:
             flash('Passwords do not match!', 'danger')
             return redirect(url_for('register'))
 
+        # Handle the uploaded profile image
+        filename = None
+        if profile_image and allowed_file(profile_image.filename):
+            # Generate a unique file name
+            extension = profile_image.filename.rsplit('.', 1)[1].lower()
+            filename = f"profile_{username}_{int(time.time())}.{extension}"
+            profile_image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
         conn = get_db_connection()
         try:
+            # Insert the new user into the users table
             conn.execute(
-                'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-                (name, email, password, role)
+                'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
+                (username, email, password)
+            )
+            # Get the user ID of the newly inserted user
+            user_id = conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()['id']
+
+            # Insert the new member into the team_members table
+            conn.execute(
+                'INSERT INTO team_members (user_id, name, role, email, image) VALUES (?, ?, ?, ?, ?)',
+                (user_id, fullname, 'Member', email, filename)
             )
             conn.commit()
+
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
@@ -433,12 +547,81 @@ def register():
 
     return render_template('register.html')
 
+
+
+@app.route('/training_drills/<int:member_id>', methods=['GET'])
+def training_drills(member_id):
+    limit = int(request.args.get('limit', 7))  # Default to 7 rows
+    offset = int(request.args.get('offset', 0))  # Default to the first page
+
+    conn = get_db_connection()
+    drills = conn.execute('''
+        SELECT * FROM training_drills
+        WHERE member_id = ?
+        LIMIT ? OFFSET ?
+    ''', (member_id, limit, offset)).fetchall()
+
+    total_drills = conn.execute('SELECT COUNT(*) FROM training_drills WHERE member_id = ?', (member_id,)).fetchone()[0]
+    conn.close()
+
+    return jsonify({
+        'drills': [dict(drill) for drill in drills],
+        'has_more': offset + limit < total_drills  # Check if there are more rows to load
+    })
+
+@app.route('/record_history/<int:member_id>', methods=['GET'])
+def record_history(member_id):
+    limit = int(request.args.get('limit', 7))  # Default to 7 rows
+    offset = int(request.args.get('offset', 0))  # Default to the first page
+
+    conn = get_db_connection()
+    try:
+        records = conn.execute('''
+            SELECT distance, time, date
+            FROM best_scores
+            WHERE member_id = ?
+            LIMIT ? OFFSET ?
+        ''', (member_id, limit, offset)).fetchall()
+
+        total_records = conn.execute('SELECT COUNT(*) FROM best_scores WHERE member_id = ?', (member_id,)).fetchone()[0]
+
+        return jsonify({
+            'records': [dict(record) for record in records],
+            'has_more': offset + limit < total_records  # Check if there are more rows
+        })
+    except Exception as e:
+        print(f"Error in /record_history: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+
 @app.route('/logout')
 def logout():
     session.clear()  # Clear the session
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+@app.route('/team_members', methods=['GET'])
+def team_members():
+    page = int(request.args.get('page', 1))  # Default to page 1
+    limit = int(request.args.get('limit', 6))  # Default to 6 members per page
+    offset = (page - 1) * limit
+
+    conn = get_db_connection()
+    members = conn.execute('''
+        SELECT * FROM team_members
+        LIMIT ? OFFSET ?
+    ''', (limit, offset)).fetchall()
+
+    total_members = conn.execute('SELECT COUNT(*) FROM team_members').fetchone()[0]
+    conn.close()
+
+    return jsonify({
+        'members': [dict(member) for member in members],
+        'has_more': offset + limit < total_members  # Check if there are more members to load
+    })
 
 if __name__ == '__main__':
-    init_db()
+    # init_db()
     app.run(debug=True)
