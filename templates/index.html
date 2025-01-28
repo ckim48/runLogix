@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #121212;
+        color: #fff;
+        font-family: Arial, sans-serif;
+    }
+    h2 {
+        color: #fff;
+    }
+    .card {
+        background-color: #1e1e1e;
+        border: none;
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.5);
+    }
+    .card-body {
+        padding: 20px;
+    }
+    .card-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #fff;
+    }
+    .card-text {
+        color: #bbb;
+        font-size: 1rem;
+    }
+    .btn {
+        background-color: #333;
+        border: 1px solid #555;
+        color: #fff;
+        border-radius: 25px;
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .btn:hover {
+        background-color: #555;
+        color: #fff;
+    }
+    .profile-image {
+        border: 2px solid #555;
+        border-radius: 50%;
+        width: 100px;
+        height: 100px;
+        overflow: hidden;
+        margin: 0 auto 15px;
+    }
+    .profile-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .modal-content {
+        background-color: #1e1e1e;
+        color: #fff;
+        border-radius: 10px;
+    }
+    .modal-header, .modal-footer {
+        border: none;
+    }
+    .modal-body label {
+        color: #ccc;
+    }
+    .form-control {
+        background-color: #333;
+        color: #fff;
+        border: 1px solid #555;
+    }
+    .form-control:focus {
+        background-color: #333;
+        color: #fff;
+        border-color: #777;
+        box-shadow: none;
+    }
+    canvas {
+/*        max-width: 300px;*/
+        margin: 0 auto;
+    }
+    #drillChart {
+/*        max-width: 1000px;*/
+        margin: 0 auto;
+    }
+</style>
+
+<div class="container mt-5">
+    <h2 class="mb-4 text-center fw-bold">Meet Our Team</h2>
+    <div class="text-center mb-4">
+        <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addMemberModal">Add Member</button>
+    </div>
+    <div class="row">
+        {% for member in team_members %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                <div class="profile-image">
+                    <img src="{{ url_for('static', filename='images/profiles/' ~ member.image) if member.image else url_for('static', filename='images/profile.webp') }}" alt="Profile Image">
+                </div>
+
+                    <h5 class="card-title">{{ member.name }}</h5>
+                    <p class="card-text"><strong>Role:</strong> {{ member.role }}</p>
+                    <p class="card-text"><strong>Email:</strong> {{ member.email }}</p>
+                    <a href="{{ url_for('view_member', member_id=member.id) }}" class="btn mt-3">More Details</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Drill and Team Analytics Charts -->
+<div class="container mt-5">
+    <h2 class="text-center fw-bold">Team and Drill Analytics</h2>
+    <div class="row">
+        <div class="col-md-6">
+            <h4 class="text-center">Team Roles Distribution</h4>
+            <canvas id="teamChart"></canvas>
+        </div>
+        <div class="col-md-6">
+            <h4 class="text-center">Drill Performance</h4>
+            <canvas id="drillChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Example data for team roles
+    const teamRoles = {
+        labels: ['Runner', 'Coach', 'Support Staff'],
+        datasets: [{
+            data: [10, 2, 3], // Replace with dynamic data
+            backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe']
+        }]
+    };
+
+    // Example data for drill performance
+    const drillPerformance = {
+        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        datasets: [{
+            label: 'Total Training Time (mins)',
+            data: [120, 150, 180, 200], // Replace with dynamic data
+            borderColor: '#fff',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            borderWidth: 2
+        }]
+    };
+
+    // Team Chart
+    new Chart(document.getElementById('teamChart'), {
+        type: 'doughnut',
+        data: teamRoles,
+        options: {
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        color: '#fff'
+                    }
+                }
+            }
+        }
+    });
+
+    // Drill Chart
+    new Chart(document.getElementById('drillChart'), {
+        type: 'line',
+        data: drillPerformance,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: '#fff'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#fff' },
+                    grid: { color: '#333' }
+                },
+                y: {
+                    ticks: { color: '#fff' },
+                    grid: { color: '#333' }
+                }
+            }
+        }
+    });
+</script>
+
+<!-- Modal for Adding Member -->
+<div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addMemberModalLabel">Add New Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('manage_team') }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="memberName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="memberName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="memberRole" class="form-label">Role</label>
+                        <input type="text" class="form-control" id="memberRole" name="role" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="memberEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="memberEmail" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="memberImage" class="form-label">Profile Image</label>
+                        <input type="file" class="form-control" id="memberImage" name="image" accept="image/*" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Add Member</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

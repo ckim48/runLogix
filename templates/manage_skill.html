@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Manage Training Skills</h2>
+<form method="POST">
+    <input type="text" name="skill" placeholder="Skill" required>
+    <input type="text" name="description" placeholder="Description" required>
+    <button type="submit">Add Skill</button>
+</form>
+<ul>
+    {% for skill in training_skills %}
+    <li>{{ skill.skill }} - {{ skill.description }}</li>
+    {% endfor %}
+</ul>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Manage Team Members</h2>
+<form method="POST">
+    <input type="text" name="name" placeholder="Name" required>
+    <input type="text" name="role" placeholder="Role" required>
+    <input type="email" name="email" placeholder="Email" required>
+    <button type="submit">Add Member</button>
+</form>
+<ul>
+    {% for member in team_members %}
+    <li>{{ member.name }} ({{ member.role }}) - {{ member.email }}</li>
+    {% endfor %}
+</ul>
+{% endblock %}
