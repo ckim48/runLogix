@@ -73,7 +73,7 @@
     }
     .highlight-row {
         background-color: #ffcc00 !important;
-        color: #000;
+        color: white;
         font-weight: bold;
         border: 2px solid #fff;
     }
@@ -81,7 +81,18 @@
 
 <div class="container mt-5">
     <div class="card mx-auto" style="max-width: 600px;">
-        <div class="card-body">
+        <div class="card-body text-center">
+            {% if member.image %}
+                <img src="{{ url_for('static', filename='images/profiles/' + member.image) }}"
+                     alt="{{ member.name }}'s profile image"
+                     class="img-fluid rounded-circle mb-3"
+                     style="width: 150px; height: 150px; object-fit: cover;">
+            {% else %}
+                <img src="{{ url_for('static', filename='images/profile.webp') }}"
+                     alt="Default profile image"
+                     class="img-fluid rounded-circle mb-3"
+                     style="width: 150px; height: 150px; object-fit: cover;">
+            {% endif %}
             <h5 class="card-title">{{ member.name }}</h5>
             <p class="card-text"><strong>Role:</strong> {{ member.role }}</p>
             <p class="card-text"><strong>Email:</strong> {{ member.email }}</p>
@@ -90,6 +101,7 @@
     </div>
     <div class="card mt-3">
     <div class="card-body">
+        <h3>Training Recommendation</h3>
         <p id="recommendation-text" class="card-text">Loading recommendation...</p>
         <button type="button" class="btn btn-primary mt-2" id="refresh-recommendation">Refresh Recommendation</button>
     </div>
@@ -116,7 +128,7 @@
     </table>
     <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addDrillModal">Add New Drill</button>
 
-    <h3 class="mt-5">Best Scores</h3>
+    <h3 class="mt-5">Record History</h3>
     <table class="table table-dark table-striped mt-3">
     <thead>
         <tr>
@@ -155,12 +167,14 @@
                     </div>
                     <div class="mb-3">
                         <label for="drillType" class="form-label">Drill</label>
-                        <select class="form-select" id="drillType" name="drill" required>
-                            <option value="Endurance">Endurance</option>
-                            <option value="Speed">Speed</option>
-                            <option value="Strength">Strength</option>
-                            <option value="Flexibility">Flexibility</option>
-                        </select>
+                        <input class="form-select" id="drillType" name="drill" required>
+
+<!--                        <select class="form-select" id="drillType" name="drill" required>-->
+<!--                            <option value="Endurance">Endurance</option>-->
+<!--                            <option value="Speed">Speed</option>-->
+<!--                            <option value="Strength">Strength</option>-->
+<!--                            <option value="Flexibility">Flexibility</option>-->
+<!--                        </select>-->
                     </div>
                     <div class="mb-3">
                         <label for="drillDuration" class="form-label">Duration (min)</label>

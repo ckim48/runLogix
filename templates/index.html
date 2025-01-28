@@ -78,30 +78,64 @@
         border-color: #777;
         box-shadow: none;
     }
-    canvas {
-/*        max-width: 300px;*/
-        margin: 0 auto;
+   .chart-card {
+        background-color: #1e1e1e;
+        border-radius: 15px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        padding: 5px;
+        height: 350px; /* Ensures consistent height */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center; /* Align content to center */
     }
-    #drillChart {
-/*        max-width: 1000px;*/
-        margin: 0 auto;
+    .chart-card-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #fff;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    canvas {
+        max-width: 100%;
+        height: 250px !important; /* Fixed canvas height */
+        width: 100% !important; /* Fixed canvas width for consistency */
+    }
+     .section-title {
+        font-size: 2rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: white; /* Bright color to stand out */
+        text-align: center;
+        margin-bottom: 20px;
+        position: relative;
+        padding-bottom: 10px;
+    }
+    .section-title::after {
+        content: "";
+        display: block;
+        width: 50px;
+        height: 4px;
+        background: #36a2eb; /* Accent color */
+        margin: 10px auto 0;
+        border-radius: 2px;
     }
 </style>
-
 <div class="container mt-5">
-    <h2 class="mb-4 text-center fw-bold">Meet Our Team</h2>
-    <div class="text-center mb-4">
+    <h2 class="section-title" data-aos="fade-up">{{username}}'s Team</h2>
+    <div class="text-center mb-4" data-aos="fade-up" data-aos-delay="100">
         <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addMemberModal">Add Member</button>
     </div>
-    <div class="row">
+    <div class="row" id="team-members">
         {% for member in team_members %}
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-4" data-aos="zoom-in" data-aos-delay="{{ loop.index * 100 }}">
             <div class="card shadow-sm">
                 <div class="card-body text-center">
-                <div class="profile-image">
-                    <img src="{{ url_for('static', filename='images/profiles/' ~ member.image) if member.image else url_for('static', filename='images/profile.webp') }}" alt="Profile Image">
-                </div>
-
+                    <div class="profile-image">
+                        <img src="{{ url_for('static', filename='images/profiles/' ~ member.image) if member.image else url_for('static', filename='images/profile.webp') }}" alt="Profile Image">
+                    </div>
                     <h5 class="card-title">{{ member.name }}</h5>
                     <p class="card-text"><strong>Role:</strong> {{ member.role }}</p>
                     <p class="card-text"><strong>Email:</strong> {{ member.email }}</p>
@@ -113,88 +147,45 @@
     </div>
 </div>
 
-<!-- Drill and Team Analytics Charts -->
 <div class="container mt-5">
-    <h2 class="text-center fw-bold">Team and Drill Analytics</h2>
-    <div class="row">
-        <div class="col-md-6">
-            <h4 class="text-center">Team Roles Distribution</h4>
-            <canvas id="teamChart"></canvas>
+    <h2 class="section-title" data-aos="fade-up">Team Management Dashboard</h2>
+    <div class="row g-4">
+        <div class="col-md-6" data-aos="fade-right">
+            <div class="chart-card">
+                <div class="card-body">
+                    <h5 class="chart-card-title text-center">Role Distribution</h5>
+                    <canvas id="roleChart" width="200" height="200"></canvas>
+                </div>
+            </div>
         </div>
-        <div class="col-md-6">
-            <h4 class="text-center">Drill Performance</h4>
-            <canvas id="drillChart"></canvas>
+        <div class="col-md-6" data-aos="fade-left">
+            <div class="chart-card">
+                <div class="card-body">
+                    <h5 class="chart-card-title text-center">Drill Activity Over Time</h5>
+                    <canvas id="drillChart" width="200" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-4 mt-4">
+        <div class="col-md-6" data-aos="fade-right" data-aos-delay="200">
+            <div class="chart-card">
+                <div class="card-body">
+                    <h5 class="chart-card-title text-center">Average Drill Duration</h5>
+                    <canvas id="durationChart" width="200" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6" data-aos="fade-left" data-aos-delay="200">
+            <div class="chart-card">
+                <div class="card-body">
+                    <h5 class="chart-card-title text-center">Best Scores Analysis</h5>
+                    <canvas id="scoreChart" width="200" height="200"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    // Example data for team roles
-    const teamRoles = {
-        labels: ['Runner', 'Coach', 'Support Staff'],
-        datasets: [{
-            data: [10, 2, 3], // Replace with dynamic data
-            backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe']
-        }]
-    };
-
-    // Example data for drill performance
-    const drillPerformance = {
-        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-        datasets: [{
-            label: 'Total Training Time (mins)',
-            data: [120, 150, 180, 200], // Replace with dynamic data
-            borderColor: '#fff',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            borderWidth: 2
-        }]
-    };
-
-    // Team Chart
-    new Chart(document.getElementById('teamChart'), {
-        type: 'doughnut',
-        data: teamRoles,
-        options: {
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom',
-                    labels: {
-                        color: '#fff'
-                    }
-                }
-            }
-        }
-    });
-
-    // Drill Chart
-    new Chart(document.getElementById('drillChart'), {
-        type: 'line',
-        data: drillPerformance,
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: true,
-                    labels: {
-                        color: '#fff'
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: { color: '#fff' },
-                    grid: { color: '#333' }
-                },
-                y: {
-                    ticks: { color: '#fff' },
-                    grid: { color: '#333' }
-                }
-            }
-        }
-    });
-</script>
 
 <!-- Modal for Adding Member -->
 <div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
@@ -204,7 +195,7 @@
                 <h5 class="modal-title" id="addMemberModalLabel">Add New Member</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('manage_team') }}" enctype="multipart/form-data">
+            <form id="addMemberForm">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="memberName" class="form-label">Name</label>
@@ -220,7 +211,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="memberImage" class="form-label">Profile Image</label>
-                        <input type="file" class="form-control" id="memberImage" name="image" accept="image/*" required>
+                        <input type="file" class="form-control" id="memberImage" name="image" accept="image/*">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -228,8 +219,179 @@
                     <button type="submit" class="btn btn-primary">Add Member</button>
                 </div>
             </form>
-
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('addMemberForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    try {
+        const response = await fetch("{{ url_for('manage_team') }}", {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            const teamMembersContainer = document.getElementById('team-members');
+            teamMembersContainer.innerHTML = '';
+
+            result.team_members.forEach(member => {
+                const memberHTML = `
+                    <div class="col-md-4 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="profile-image">
+                                    <img src="/static/images/profiles/${member.image || 'profile.webp'}" alt="Profile Image">
+                                </div>
+                                <h5 class="card-title">${member.name}</h5>
+                                <p class="card-text"><strong>Role:</strong> ${member.role}</p>
+                                <p class="card-text"><strong>Email:</strong> ${member.email}</p>
+                                <a href="/view_member/${member.id}" class="btn mt-3">More Details</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                teamMembersContainer.insertAdjacentHTML('beforeend', memberHTML);
+            });
+
+            // Close the modal
+            const modalElement = document.getElementById('addMemberModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            modal.hide();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    async function fetchChartData() {
+        const response = await fetch('/chart-data');
+        const data = await response.json();
+
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#fff' // White text for legend
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#fff' }, // White text for x-axis labels
+                    grid: { color: '#444' }  // Light gray grid lines
+                },
+                y: {
+                    ticks: { color: '#fff' }, // White text for y-axis labels
+                    grid: { color: '#444' }  // Light gray grid lines
+                }
+            }
+        };
+
+        // Role Distribution Chart
+        const roleCtx = document.getElementById('roleChart').getContext('2d');
+        new Chart(roleCtx, {
+            type: 'pie',
+            data: {
+                labels: data.role_data.map(item => item.role),
+                datasets: [{
+                    data: data.role_data.map(item => item.count),
+                    backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff' // White text for legend
+                        }
+                    }
+                }
+            }
+        });
+
+        // Drill Activity Chart
+        const drillCtx = document.getElementById('drillChart').getContext('2d');
+        new Chart(drillCtx, {
+            type: 'line',
+            data: {
+                labels: data.drill_data.map(item => item.date),
+                datasets: [{
+                    label: 'Drills Over Time',
+                    data: data.drill_data.map(item => item.count),
+                    borderColor: '#36a2eb',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    fill: true
+                }]
+            },
+            options: commonOptions
+        });
+
+        // Average Drill Duration Chart
+        const durationCtx = document.getElementById('durationChart').getContext('2d');
+        new Chart(durationCtx, {
+            type: 'bar',
+            data: {
+                labels: data.duration_data.map(item => item.name),
+                datasets: [{
+                    label: 'Average Duration (min)',
+                    data: data.duration_data.map(item => item.avg_duration),
+                    backgroundColor: '#ffce56'
+                }]
+            },
+            options: commonOptions
+        });
+
+        // Best Scores Chart
+        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+        new Chart(scoreCtx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Best Scores',
+                    data: data.score_data.map(item => ({ x: item.distance, y: item.time })),
+                    backgroundColor: '#ff6384'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Distance (m)', color: '#fff' },
+                        ticks: { color: '#fff' },
+                        grid: { color: '#444' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Time (min)', color: '#fff' },
+                        ticks: { color: '#fff' },
+                        grid: { color: '#444' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Fetch and render charts on page load
+    fetchChartData();
+</script>
+
+</script>
 {% endblock %}
