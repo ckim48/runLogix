@@ -146,6 +146,10 @@
     margin-right: 8px;
     color: gold; /* You can adjust the color based on rank */
 }
+::placeholder {
+  color: #ffffff !important;
+  opacity: 0.8;
+}
 
 </style>
 <div class="container mt-5">
@@ -163,6 +167,7 @@
     {% endif %}
 
 
+
 <div class="row" id="team-members">
     <!-- Members will be loaded here dynamically -->
 </div>
@@ -171,6 +176,61 @@
 </div>
 
 </div>
+<div class="container mt-5">
+  <h3 class="section-title text-white" data-aos="fade-up">Coach Dashboard</h3>
+
+  <div class="row g-4">
+    <!-- Coach Reminders -->
+    <div class="col-md-6" data-aos="fade-up">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title text-white">Team Reminders</h5>
+
+          <label for="coach-reminders" class="form-label text-white">Reminders</label>
+          <textarea id="coach-reminders" class="form-control text-white" rows="12" placeholder="Enter reminders here...">{{ coach_data.reminder or '' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upcoming Race Info -->
+    <div class="col-md-6" data-aos="fade-up">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title text-white">Upcoming Race Info</h5>
+
+          <label for="race-date" class="form-label text-white">Race Date</label>
+          <input type="text" id="race-date" class="form-control mb-2 text-white" placeholder="Race Date" value="{{ coach_data.race_date or '' }}">
+
+          <label for="race-time" class="form-label text-white">Race Time</label>
+          <input type="text" id="race-time" class="form-control mb-2 text-white" placeholder="Race Time" value="{{ coach_data.race_time or '' }}">
+
+          <label for="location" class="form-label text-white">Location</label>
+          <input type="text" id="location" class="form-control mb-2 text-white" placeholder="Location" value="{{ coach_data.location or '' }}">
+
+          <label for="weather" class="form-label text-white">Expected Weather</label>
+          <input type="text" id="weather" class="form-control mb-2 text-white" placeholder="Expected Weather" value="{{ coach_data.weather or '' }}">
+
+          <label for="requirements" class="form-label text-white">What to Bring</label>
+          <input type="text" id="requirements" class="form-control mb-2 text-white" placeholder="What to bring" value="{{ coach_data.requirements or '' }}">
+
+          {% if not coach_data.race_date and not coach_data.race_time and not coach_data.location and not coach_data.weather and not coach_data.requirements %}
+            <p class="mt-2 text-white-50">No race information has been set yet. Please fill out the details and click Save.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if role == 'Manager' %}
+  <!-- Save Button Centered -->
+  <div class="text-center mt-4">
+    <button class="btn btn-success text-white px-4 py-2" onclick="saveCoachNotes()">Save</button>
+    <p id="save-status" class="mt-2 text-white" style="display: none;">Saved successfully.</p>
+  </div>
+  {% endif %}
+</div>
+
+
 
 <div class="container mt-5">
     <h3 class="text-center mb-4">Leaderboards</h3>
@@ -311,6 +371,41 @@
         </div>
     </div>
 </div>
+<!-- Edit Member Modal -->
+<div class="modal fade" id="editMemberModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="editMemberForm" enctype="multipart/form-data">
+      <div class="modal-content bg-dark text-white">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Member</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-member-id">
+          <div class="mb-3">
+            <label>Name</label>
+            <input type="text" id="edit-member-name" name="name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label>Role</label>
+            <input type="text" id="edit-member-role" name="role" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label>Email</label>
+            <input type="email" id="edit-member-email" name="email" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label>Profile Image (optional)</label>
+            <input type="file" name="image" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Save Changes</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script>
 document.getElementById('addMemberForm').addEventListener('submit', async function (e) {
@@ -329,22 +424,31 @@ document.getElementById('addMemberForm').addEventListener('submit', async functi
             const teamMembersContainer = document.getElementById('team-members');
             teamMembersContainer.innerHTML = '';
 
-            result.team_members.forEach(member => {
-                const memberHTML = `
-                    <div class="col-md-4 mb-4">
-                        <div class="card shadow-sm">
-                            <div class="card-body text-center">
-                                <div class="profile-image">
-                                    <img src="/static/images/profiles/${member.image || 'profile.webp'}" alt="Profile Image">
-                                </div>
-                                <h5 class="card-title">${member.name}</h5>
-                                <p class="card-text"><strong>Role:</strong> ${member.role}</p>
-                                <p class="card-text"><strong>Email:</strong> ${member.email}</p>
-                                <a href="/view_member/${member.id}" class="btn mt-3">More Details</a>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                    result.team_members.forEach(member => {
+
+const memberHTML = `
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm position-relative">
+            {% if role == 'Manager' %}
+            <div class="position-absolute top-0 end-0 m-2">
+                <button class="btn btn-sm btn-warning me-1" onclick="showEditModal(${member.id}, '${member.name}', '${member.role}', '${member.email}')">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteMember(${member.id})">Delete</button>
+            </div>
+            {% endif %}
+            <div class="card-body text-center">
+                <div class="profile-image">
+                    <img src="/static/images/profiles/${member.image || 'profile.webp'}" alt="Profile Image">
+                </div>
+                <h5 class="card-title">${member.name}</h5>
+                <p class="card-text"><strong>Role:</strong> ${member.role}</p>
+                <p class="card-text"><strong>Email:</strong> ${member.email}</p>
+                <a href="/view_member/${member.id}" class="btn mt-3">More Details</a>
+            </div>
+        </div>
+    </div>
+`;
+
+
                 teamMembersContainer.insertAdjacentHTML('beforeend', memberHTML);
             });
 
@@ -528,23 +632,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             // Append members to the container
-            data.members.forEach(member => {
-                const memberHTML = `
-                    <div class="col-md-4 mb-4">
-                        <div class="card shadow-sm">
-                            <div class="card-body text-center">
-                                <div class="profile-image">
-                                    <img src="/static/images/profiles/${member.image || 'profile.webp'}" alt="Profile Image">
-                                </div>
-                                <h5 class="card-title">${member.name}</h5>
-                                <p class="card-text"><strong>Role:</strong> ${member.role}</p>
-                                <p class="card-text"><strong>Email:</strong> ${member.email}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                teamMembersContainer.insertAdjacentHTML('beforeend', memberHTML);
-            });
+data.members.forEach(member => {
+
+const memberHTML = `
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm position-relative">
+            {% if role == 'Manager' %}
+            <div class="position-absolute top-0 end-0 m-2">
+                <button class="btn btn-sm btn-warning me-1" onclick="showEditModal(${member.id}, '${member.name}', '${member.role}', '${member.email}')">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteMember(${member.id})">Delete</button>
+            </div>
+            {% endif %}
+            <div class="card-body text-center">
+                <div class="profile-image">
+                    <img src="/static/images/profiles/${member.image || 'profile.webp'}" alt="Profile Image">
+                </div>
+                <h5 class="card-title">${member.name}</h5>
+                <p class="card-text"><strong>Role:</strong> ${member.role}</p>
+                <p class="card-text"><strong>Email:</strong> ${member.email}</p>
+                <a href="/view_member/${member.id}" class="btn mt-3">More Details</a>
+            </div>
+        </div>
+    </div>
+`;
+
+
+    teamMembersContainer.insertAdjacentHTML('beforeend', memberHTML);
+});
 
             // Update the button state
             if (!data.has_more) {
@@ -565,6 +679,76 @@ document.addEventListener('DOMContentLoaded', () => {
         viewMoreButton.dataset.page = nextPage; // Update to the next page
     });
 });
+</script>
+<script>
+function saveCoachNotes() {
+    const data = {
+        reminder: document.getElementById('coach-reminders').value,
+        race_date: document.getElementById('race-date').value,
+        race_time: document.getElementById('race-time').value,
+        location: document.getElementById('location').value,
+        weather: document.getElementById('weather').value,
+        requirements: document.getElementById('requirements').value
+    };
+
+    fetch("/save_coach_notes", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    }).then(res => res.json()).then(res => {
+        if (res.success) {
+            document.getElementById("save-status").style.display = "block";
+            setTimeout(() => {
+                document.getElementById("save-status").style.display = "none";
+            }, 2000);
+        }
+    });
+}
+</script>
+<script>
+function showEditModal(id, name, role, email) {
+    document.getElementById('edit-member-id').value = id;
+    document.getElementById('edit-member-name').value = name;
+    document.getElementById('edit-member-role').value = role;
+    document.getElementById('edit-member-email').value = email;
+    new bootstrap.Modal(document.getElementById('editMemberModal')).show();
+}
+
+document.getElementById('editMemberForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const id = document.getElementById('edit-member-id').value;
+    const formData = new FormData(this);
+    try {
+        const res = await fetch(`/update_member/${id}`, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await res.json();
+        if (result.success) {
+            location.reload();  // Refresh to see updated info
+        }
+    } catch (err) {
+        console.error('Edit error:', err);
+    }
+});
+
+async function deleteMember(id) {
+    if (!confirm("Are you sure you want to delete this member?")) return;
+
+    try {
+        const res = await fetch(`/delete_member/${id}`, {
+            method: 'POST'
+        });
+        const result = await res.json();
+        if (result.success) {
+            location.reload();
+        }
+    } catch (err) {
+        console.error('Delete error:', err);
+    }
+}
 </script>
 
 {% endblock %}

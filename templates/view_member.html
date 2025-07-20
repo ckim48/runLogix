@@ -101,6 +101,9 @@
 .form-control::-ms-input-placeholder { /* For Microsoft Edge */
     color: #fff;
 }
+    #pre-race-tips{
+        color:white;
+    }
 
 </style>
 
@@ -132,22 +135,19 @@
     <div class="card">
         <div class="card-body">
             <h5 class="card-title text-center">Set Your Monthly Running Goal</h5>
-            <p class="card-text text-center">
-                <strong>Goal:</strong>
-                {{ member.goal_target }} km
-            </p>
+            <p class="card-text text-center"><strong>Target 5km Time:</strong> {{ member.target_time_5km }} minutes</p>
 
             <!-- Progress Bar -->
-            <p class="text-center mt-3"><strong>Progress:</strong> {{ total_distance }} km / {{ member.goal_target }} km</p>
-            <div class="progress mb-3">
-                <div class="progress-bar" role="progressbar"
-                     style="width: {{ (total_distance / member.goal_target) * 100 if member.goal_target else 0 }}%;"
-                     aria-valuenow="{{ total_distance }}"
-                     aria-valuemin="0"
-                     aria-valuemax="{{ member.goal_target }}">
-                    {{ ((total_distance / member.goal_target) * 100 if member.goal_target else 0) | round(1) }}%
-                </div>
-            </div>
+            <strong>Best Time:</strong> {{ best_time }} min / Target: {{ member.target_time_5km }} min
+<!--            <div class="progress mb-3">-->
+<!--                <div class="progress-bar" role="progressbar"-->
+<!--                     style="width: {{ (total_distance / member.goal_target) * 100 if member.goal_target else 0 }}%;"-->
+<!--                     aria-valuenow="{{ total_distance }}"-->
+<!--                     aria-valuemin="0"-->
+<!--                     aria-valuemax="{{ member.goal_target }}">-->
+<!--                    {{ ((total_distance / member.goal_target) * 100 if member.goal_target else 0) | round(1) }}%-->
+<!--                </div>-->
+<!--            </div>-->
 
             <!-- Cheer-Up Comments -->
             <div class="text-center mt-3">
@@ -187,8 +187,8 @@
             <form method="POST" action="{{ url_for('set_goal', member_id=member.id) }}">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="newGoal" class="form-label">New Goal (km)</label>
-                        <input type="number" class="form-control" id="newGoal" name="goal" min="1" required>
+                        <label for="newGoal" class="form-label">Target 5km Time (minutes)</label>
+                        <input type="number" class="form-control" id="newGoal" name="target_time" step="0.1" min="1" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -203,12 +203,13 @@
     </div>
 <div class="card mt-3">
     <div class="card-body">
-        <h3>AI Training Recommendation</h3>
+        <h3>AI 5km Record Prediction</h3>
         <p id="recommendation-text" class="card-text">Loading recommendation...</p>
         <ul id="recommendation-list" class="list-group list-group-flush mt-3" style="display: none;">
             <!-- This will be populated dynamically -->
         </ul>
-<!--        <button type="button" class="btn btn-primary mt-2" id="refresh-recommendation">Refresh Recommendation</button>-->
+                <h3 class="mt-5 mb-2">Pre-Race Day Tips</h3>
+        <p class="card-text" id="pre-race-tips" >Loading tips...</p>
     </div>
 </div>
 
@@ -343,52 +344,62 @@
 </div>
 
 <script>
-   async function fetchRecommendation() {
+async function fetchRecommendation() {
     try {
         const response = await fetch('{{ url_for("get_recommendation", member_id=member.id) }}');
         const recommendationList = document.getElementById('recommendation-list');
         const recommendationText = document.getElementById('recommendation-text');
+        const preRaceTips = document.getElementById('pre-race-tips');
 
-        if (response.ok) {
-            const data = await response.json();
-            const recommendation = data.recommendation;
-
-            // Split the recommendation into bullet points
-            const points = recommendation.split('\n').filter(point => point.trim() !== '');
-
-            // Clear previous recommendations
-            recommendationList.innerHTML = '';
-
-            if (points.length > 0) {
-                points.forEach(point => {
-                    const listItem = document.createElement('li');
-                    listItem.className = 'list-group-item bg-dark text-light border-secondary';
-                    listItem.innerText = point.trim();
-                    recommendationList.appendChild(listItem);
-                });
-                recommendationList.style.display = 'block';
-                recommendationText.style.display = 'none';
-            } else {
-                recommendationText.innerText = 'No recommendations available.';
-                recommendationList.style.display = 'none';
-            }
-        } else {
+        if (!response.ok) {
             recommendationText.innerText = 'Failed to load recommendation.';
             recommendationList.style.display = 'none';
+            preRaceTips.innerText = 'No tips available.';
+            return;
         }
+
+        const data = await response.json();
+        const fullText = data.full_text || "";
+        const prediction = data.prediction || "";
+        const reason = data.reason || "";
+
+        // Show first two sentences as tips
+        preRaceTips.innerText = `${prediction} ${reason}`.trim();
+
+        // Create bullet points
+        const points = fullText.split('\n').filter(line => line.trim() !== '');
+        recommendationList.innerHTML = '';
+        if (points.length > 0) {
+            points.forEach(point => {
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item bg-dark text-light border-secondary';
+                listItem.innerText = point.trim();
+                recommendationList.appendChild(listItem);
+            });
+            recommendationList.style.display = 'block';
+            recommendationText.style.display = 'none';
+        } else {
+            recommendationText.innerText = 'No recommendations available.';
+            recommendationList.style.display = 'none';
+        }
+
     } catch (error) {
         console.error(error);
         const recommendationText = document.getElementById('recommendation-text');
         recommendationText.innerText = 'Error fetching recommendation.';
         recommendationList.style.display = 'none';
+        document.getElementById('pre-race-tips').innerText = 'No tips available.';
     }
 }
 
-document.getElementById('refresh-recommendation').addEventListener('click', fetchRecommendation);
+// Optional: attach event listener safely
+const refreshBtn = document.getElementById('refresh-recommendation');
+if (refreshBtn) {
+    refreshBtn.addEventListener('click', fetchRecommendation);
+}
 
-// Fetch recommendation on page load
+// Load once on page load
 fetchRecommendation();
-
         function toggleOtherDrillInput() {
         const drillType = document.getElementById('drillType').value;
         const otherDrillInput = document.getElementById('otherDrill');
@@ -631,4 +642,5 @@ async function loadRecordHistory() {
     document.getElementById('viewMoreRecords').addEventListener('click', loadRecordHistory);
 
 </script>
+
 {% endblock %}

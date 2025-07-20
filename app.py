@@ -9,6 +9,7 @@ app.secret_key = 'your_secret_key'
 UPLOAD_FOLDER = 'static/images/profiles'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -119,6 +120,44 @@ def init_db():
 
     conn.commit()
     conn.close()
+@app.route('/delete_member/<int:member_id>', methods=['POST'])
+def delete_member(member_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    conn = get_db_connection()
+    conn.execute('DELETE FROM team_members WHERE id = ?', (member_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/update_member/<int:member_id>', methods=['POST'])
+def update_member(member_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    name = request.form['name']
+    role = request.form['role']
+    email = request.form['email']
+    image = request.files.get('image', None)
+
+    conn = get_db_connection()
+    filename = None
+    if image and allowed_file(image.filename):
+        filename = secure_filename(image.filename)
+        image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        conn.execute('''
+            UPDATE team_members SET name = ?, role = ?, email = ?, image = ? WHERE id = ?
+        ''', (name, role, email, filename, member_id))
+    else:
+        conn.execute('''
+            UPDATE team_members SET name = ?, role = ?, email = ? WHERE id = ?
+        ''', (name, role, email, member_id))
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
 @app.route('/get_recommendation/<int:member_id>', methods=['GET'])
 def get_recommendation(member_id):
     conn = get_db_connection()
@@ -132,28 +171,31 @@ def get_recommendation(member_id):
     conn.close()
 
     if not member:
-        return {"recommendation": "Member not found"}, 404
+        return jsonify({"error": "Member not found"}), 404
 
-    # Calculate goal progress percentage
-    goal_target = member['goal_target'] or 0
-    progress_percentage = (total_distance / goal_target) * 100 if goal_target > 0 else 0
+    target_time = member['target_time_5km']
+    drill_history = "\n".join([
+        f"{drill['date']}: {drill['drill']} for {drill['duration']} minutes"
+        for drill in drills
+    ]) or "No historical data available."
 
-    # Prepare drill history and progress for GPT
-    drill_history = "\n".join([f"{drill['date']}: {drill['drill']} for {drill['duration']} minutes" for drill in drills]) or "No historical data available."
-    goal_progress_info = f"Current progress: {total_distance} km out of {goal_target} km ({progress_percentage:.1f}%)."
+    goal_progress_info = f"Target 5km Time: {target_time} minutes."
 
-    # Construct the GPT prompt
     prompt = f"""
-    Here is the historical drill data and goal progress for a team member:
-    Drill History:
+    You are a performance analyst. Based on the training history and goal progress of the following athlete, estimate their best time for a 5km run.
+
+    Training History:
     {drill_history}
 
-    {goal_progress_info}
+    Total distance run so far: {total_distance} km
+    Goal progress: {goal_progress_info}
 
-    Based on this, suggest a drill for the next session. Provide a concise explanation for your recommendation. Use two bullet points for two recommendation, each with a maximum of two sentences.
+    Please guess a reasonable 5km time in minutes and explain your reasoning in 1-2 sentences.
+    Format:
+    - Predicted 5km Time: X minutes
+    - Reason: ...
     """
 
-    # Generate a recommendation using GPT
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -162,22 +204,47 @@ def get_recommendation(member_id):
                 {"role": "user", "content": prompt}
             ]
         )
-        recommendation = response.choices[0].message.content.strip()
+        recommendation_raw = response.choices[0].message.content.strip()
     except Exception as e:
         print(e)
-        recommendation = "Unable to generate a recommendation. Please try again later."
+        return jsonify({
+            "prediction": None,
+            "reason": None,
+            "full_text": "Unable to generate a recommendation. Please try again later."
+        }), 500
 
-    # Append a note if no historical data exists
+    # Extract structured parts
+    prediction = ""
+    reason = ""
+    for line in recommendation_raw.splitlines():
+        if line.startswith("- Predicted 5km Time:"):
+            prediction = line.replace("- Predicted 5km Time:", "").strip()
+        elif line.startswith("- Reason:"):
+            reason = line.replace("- Reason:", "").strip()
+
+    # Fallback if extraction fails
+    if not prediction or not reason:
+        # Try basic sentence extraction
+        sentences = recommendation_raw.split(". ")
+        prediction = sentences[0].strip() + '.' if len(sentences) > 0 else ""
+        reason = sentences[1].strip() + '.' if len(sentences) > 1 else ""
+
     if not drills:
-        recommendation += " Note: More data is needed to provide tailored recommendations in the future."
+        reason += " Note: More data is needed to provide tailored recommendations in the future."
 
-    return {"recommendation": recommendation}
+    return jsonify({
+        "prediction": prediction,
+        "reason": reason,
+        "full_text": recommendation_raw
+    })
+
 
 @app.route('/set_goal/<int:member_id>', methods=['POST'])
 def set_goal(member_id):
-    new_goal = request.form['goal']
+    new_target_time = request.form['target_time']
+
     conn = get_db_connection()
-    conn.execute('UPDATE team_members SET goal_target = ? WHERE id = ?', (new_goal, member_id))
+    conn.execute('UPDATE team_members SET target_time_5km = ? WHERE id = ?', (new_target_time, member_id))
     conn.commit()
     conn.close()
     flash('Goal updated successfully!', 'success')
@@ -195,6 +262,9 @@ def main():
         return redirect(url_for('login'))
 
     conn = get_db_connection()
+    coach_data = conn.execute(
+        'SELECT * FROM coach_notes WHERE user_id = ?', (session['user_id'],)
+    ).fetchone()
 
     try:
         # Fetch the full name and role of the logged-in user
@@ -215,7 +285,8 @@ def main():
         # Fetch all team members from the database
         team_members = conn.execute('SELECT * FROM team_members').fetchall()
 
-        return render_template('index.html', fullname=fullname, role=role, member_id=member_id, team_members=team_members)
+        return render_template('index.html', fullname=fullname, role=role, member_id=member_id,
+                               team_members=team_members, coach_data=coach_data)
 
     finally:
         conn.close()
@@ -619,8 +690,35 @@ def team_members():
 
     return jsonify({
         'members': [dict(member) for member in members],
-        'has_more': offset + limit < total_members  # Check if there are more members to load
+        'has_more': offset + limit < total_members
     })
+
+
+@app.route('/save_coach_notes', methods=['POST'])
+def save_coach_notes():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 403
+
+    data = request.get_json()
+    conn = get_db_connection()
+
+    existing = conn.execute('SELECT * FROM coach_notes WHERE user_id = ?', (session['user_id'],)).fetchone()
+    if existing:
+        conn.execute('''
+            UPDATE coach_notes
+            SET reminder = ?, race_date = ?, race_time = ?, location = ?, weather = ?, requirements = ?
+            WHERE user_id = ?
+        ''', (data['reminder'], data['race_date'], data['race_time'],
+              data['location'], data['weather'], data['requirements'], session['user_id']))
+    else:
+        conn.execute('''
+            INSERT INTO coach_notes (user_id, reminder, race_date, race_time, location, weather, requirements)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (session['user_id'], data['reminder'], data['race_date'], data['race_time'],
+              data['location'], data['weather'], data['requirements']))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 if __name__ == '__main__':
     # init_db()
