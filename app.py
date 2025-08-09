@@ -253,21 +253,16 @@ def set_goal(member_id):
 @app.route('/')
 def index():
     return render_template('landing.html')
-
-
 @app.route('/main')
 def main():
     if 'user_id' not in session:
         flash('Please log in to access the dashboard.', 'warning')
         return redirect(url_for('login'))
 
-    conn = get_db_connection()
-    coach_data = conn.execute(
-        'SELECT * FROM coach_notes WHERE user_id = ?', (session['user_id'],)
-    ).fetchone()
+    ensure_coach_notes_schema()  # make sure table/column exists
 
+    conn = get_db_connection()
     try:
-        # Fetch the full name and role of the logged-in user
         user = conn.execute('SELECT fullname, role FROM users WHERE id = ?', (session['user_id'],)).fetchone()
         if not user:
             flash('User not found. Please log in again.', 'danger')
@@ -276,132 +271,71 @@ def main():
         fullname = user['fullname']
         role = user['role']
 
-        # If the user is a team member, get their corresponding member ID
+        # Manager sees their latest note; others see latest note from any Manager
+        if role == 'Manager':
+            coach_data = conn.execute(
+                'SELECT * FROM coach_notes WHERE user_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1',
+                (session['user_id'],)
+            ).fetchone()
+        else:
+            coach_data = conn.execute('''
+                SELECT cn.*
+                FROM coach_notes cn
+                JOIN users u ON u.id = cn.user_id
+                WHERE u.role = 'Manager'
+                ORDER BY cn.updated_at DESC, cn.id DESC
+                LIMIT 1
+            ''').fetchone()
+
+        # Member quick link (if you actually want the team_members id, grab from that table)
         member_id = None
-        if role == 'Member':
-            member = conn.execute('SELECT id FROM users WHERE name = ?', (session['user_name'],)).fetchone()
-            member_id = member['id'] if member else None
-            print(member_id)
-        # Fetch all team members from the database
+        tm = conn.execute(
+            'SELECT tm.id FROM team_members tm WHERE tm.user_id = ? LIMIT 1',
+            (session['user_id'],)
+        ).fetchone()
+        member_id = tm['id'] if tm else None
+
         team_members = conn.execute('SELECT * FROM team_members').fetchall()
 
-        return render_template('index.html', fullname=fullname, role=role, member_id=member_id,
-                               team_members=team_members, coach_data=coach_data)
-
+        return render_template(
+            'index.html',
+            fullname=fullname,
+            role=role,
+            member_id=member_id,
+            team_members=team_members,
+            coach_data=coach_data
+        )
     finally:
         conn.close()
-@app.route('/chart-data', methods=['GET'])
-def chart_data():
+def ensure_coach_notes_schema():
     conn = get_db_connection()
+    try:
+        # Create table if missing
+        conn.execute('''
+        CREATE TABLE IF NOT EXISTS coach_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            reminder TEXT,
+            race_date TEXT,
+            race_time TEXT,
+            location TEXT,
+            weather TEXT,
+            requirements TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+        ''')
 
-    # Progress Over Time (Sum of weekly distances for all members)
-    progress_data = conn.execute('''
-        SELECT strftime('%Y-%W', date) as week, SUM(distance) as total_distance
-        FROM best_scores
-        GROUP BY week
-        ORDER BY week
-    ''').fetchall()
+        # If table existed without updated_at, add it
+        cols = [r['name'] for r in conn.execute("PRAGMA table_info(coach_notes)").fetchall()]
+        if 'updated_at' not in cols:
+            conn.execute("ALTER TABLE coach_notes ADD COLUMN updated_at DATETIME")
+        conn.commit()
+    finally:
+        conn.close()
 
-    progress_over_time = {
-        'weeks': [row['week'] for row in progress_data],
-        'distances': [row['total_distance'] for row in progress_data]
-    }
 
-    # Drill Distribution
-    drill_data = conn.execute('''
-        SELECT drill, COUNT(*) as count
-        FROM training_drills
-        GROUP BY drill
-    ''').fetchall()
 
-    drill_distribution = {
-        'drills': [row['drill'] for row in drill_data],
-        'counts': [row['count'] for row in drill_data]
-    }
-
-    # Top Performers
-    top_performers = conn.execute('''
-        SELECT tm.name, SUM(bs.distance) as total_distance
-        FROM best_scores bs
-        JOIN team_members tm ON bs.member_id = tm.id
-        GROUP BY tm.name
-        ORDER BY total_distance DESC
-        LIMIT 5
-    ''').fetchall()
-
-    top_performers_data = {
-        'names': [row['name'] for row in top_performers],
-        'distances': [row['total_distance'] for row in top_performers]
-    }
-
-    # Goal Completion
-    goal_completion = conn.execute('''
-        SELECT tm.name, tm.goal_target, COALESCE(SUM(bs.distance), 0) as total_distance
-        FROM team_members tm
-        LEFT JOIN best_scores bs ON tm.id = bs.member_id
-        GROUP BY tm.id
-    ''').fetchall()
-
-    goal_completion_data = {
-        'names': [row['name'] for row in goal_completion],
-        'percentages': [
-            (row['total_distance'] / row['goal_target']) * 100 if row['goal_target'] > 0 else 0
-            for row in goal_completion
-        ]
-    }
-
-    conn.close()
-
-    return jsonify({
-        'progress_over_time': progress_over_time,
-        'drill_distribution': drill_distribution,
-        'top_performers': top_performers_data,
-        'goal_completion': goal_completion_data
-    })
-
-@app.route('/leader-data', methods=['GET'])
-def leader_data():
-    conn = get_db_connection()
-
-    # Total Distance Leaderboard
-    top_performers = conn.execute('''
-        SELECT tm.name, SUM(bs.distance) as total_distance
-        FROM best_scores bs
-        JOIN team_members tm ON bs.member_id = tm.id
-        GROUP BY tm.name
-        ORDER BY total_distance DESC
-        LIMIT 5
-    ''').fetchall()
-
-    total_top_performers = {
-        'names': [row['name'] for row in top_performers],
-        'distances': [row['total_distance'] for row in top_performers]
-    }
-
-    # Monthly Distance Leaderboard
-    current_month = conn.execute('SELECT strftime("%Y-%m", "now")').fetchone()[0]
-    monthly_performers = conn.execute('''
-        SELECT tm.name, SUM(bs.distance) as total_distance
-        FROM best_scores bs
-        JOIN team_members tm ON bs.member_id = tm.id
-        WHERE strftime("%Y-%m", bs.date) = ?
-        GROUP BY tm.name
-        ORDER BY total_distance DESC
-        LIMIT 5
-    ''', (current_month,)).fetchall()
-
-    monthly_top_performers = {
-        'names': [row['name'] for row in monthly_performers],
-        'distances': [row['total_distance'] for row in monthly_performers]
-    }
-
-    conn.close()
-
-    return jsonify({
-        'top_performers': total_top_performers,
-        'monthly_top_performers': monthly_top_performers,
-        # Include other data as necessary
-    })
 
 
 @app.route('/add_drill/<int:member_id>', methods=['GET', 'POST'])
@@ -424,7 +358,7 @@ def view_member(member_id):
     member = conn.execute('SELECT * FROM team_members WHERE id = ?', (member_id,)).fetchone()
     drills = conn.execute('SELECT * FROM training_drills WHERE member_id = ?', (member_id,)).fetchall()
 
-    # Fetch scores sorted by distance and time
+    # All scores (kept as-is)
     best_scores = conn.execute('''
         SELECT * 
         FROM best_scores 
@@ -432,16 +366,26 @@ def view_member(member_id):
         ORDER BY distance, time ASC
     ''', (member_id,)).fetchall()
 
-    # Calculate progress data
-    progress_dates = [row['date'] for row in drills] if drills else []
-    progress_values = [row['duration'] for row in drills] if drills else []
+    fivek_records = conn.execute('''
+        SELECT date, time
+        FROM best_scores
+        WHERE member_id = ? AND ABS(distance - 5.0) < 0.01
+        ORDER BY date
+    ''', (member_id,)).fetchall()
 
-    # Drill distribution data
+    progress_dates = [row['date'] for row in fivek_records]
+    progress_values = [row['time'] for row in fivek_records]
+
+    best_time_row = conn.execute('''
+        SELECT MIN(time) AS best_time
+        FROM best_scores
+        WHERE member_id = ? AND ABS(distance - 5.0) < 0.01
+    ''', (member_id,)).fetchone()
+    best_time = best_time_row['best_time'] if best_time_row and best_time_row['best_time'] is not None else None
+
+    # Drill distribution (unchanged)
     drill_types = ['Endurance', 'Speed Training', 'Hill Repeats', 'Interval Training']
-    drill_counts = [
-        sum(1 for drill in drills if drill['drill'] == dtype)
-        for dtype in drill_types
-    ]
+    drill_counts = [sum(1 for d in drills if d['drill'] == dtype) for dtype in drill_types]
 
     conn.close()
     if not member:
@@ -456,7 +400,8 @@ def view_member(member_id):
         progress_dates=progress_dates,
         progress_values=progress_values,
         drill_types=drill_types,
-        drill_counts=drill_counts
+        drill_counts=drill_counts,
+        best_time=best_time   # 👉 pass this to template
     )
 
 
@@ -528,21 +473,121 @@ def manage_skills():
     training_skills = conn.execute('SELECT * FROM training_skills').fetchall()
     conn.close()
     return render_template('manage_skills.html', training_skills=training_skills)
-
 @app.route('/add_score/<int:member_id>', methods=['POST'])
 def add_score(member_id):
     conn = get_db_connection()
     if request.method == 'POST':
-        distance = request.form['distance']
-        time = request.form['time']
+        try:
+            # no distance from form anymore
+            distance = 5.0
+            time_val = float(request.form['time'])
+        except (ValueError, KeyError):
+            flash('Time must be a number (e.g., 21.5).', 'danger')
+            conn.close()
+            return redirect(url_for('view_member', member_id=member_id))
+
         date = request.form['date']
         conn.execute(
             'INSERT INTO best_scores (member_id, distance, time, date) VALUES (?, ?, ?, ?)',
-            (member_id, distance, time, date)
+            (member_id, distance, time_val, date)
         )
         conn.commit()
         conn.close()
         return redirect(url_for('view_member', member_id=member_id))
+from datetime import datetime, timedelta
+
+def compute_duration_minutes(date_str, bed_str, wake_str):
+    bed = datetime.fromisoformat(f"{date_str}T{bed_str}:00")
+    wake = datetime.fromisoformat(f"{date_str}T{wake_str}:00")
+    if wake <= bed:
+        wake += timedelta(days=1)
+    return int((wake - bed).total_seconds() // 60)
+@app.route('/add_sleep/<int:member_id>', methods=['POST'])
+def add_sleep(member_id):
+    date = request.form['sleep_date']
+    bedtime = request.form['bedtime']
+    waketime = request.form['waketime']
+    quality = request.form.get('quality') or None
+    notes = request.form.get('notes', '')
+
+    dur_min = compute_duration_minutes(date, bedtime, waketime)
+
+    conn = get_db_connection()
+    conn.execute("""
+      INSERT INTO sleep_logs (member_id, date, bedtime, waketime, duration_minutes, quality, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (member_id, date, bedtime, waketime, dur_min, int(quality) if quality else None, notes))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('view_member', member_id=member_id))
+@app.route('/sleep_logs/<int:member_id>', methods=['GET'])
+def sleep_logs(member_id):
+    # Optional paging
+    limit = int(request.args.get('limit', 14))
+    offset = int(request.args.get('offset', 0))
+    conn = get_db_connection()
+    rows = conn.execute("""
+        SELECT id, date, bedtime, waketime, duration_minutes, quality, notes
+        FROM sleep_logs
+        WHERE member_id = ?
+        ORDER BY date DESC
+        LIMIT ? OFFSET ?
+    """, (member_id, limit, offset)).fetchall()
+    total = conn.execute("""
+        SELECT COUNT(*) FROM sleep_logs WHERE member_id = ?
+    """, (member_id,)).fetchone()[0]
+    conn.close()
+
+    return jsonify({
+        "logs": [dict(r) for r in rows],
+        "has_more": offset + limit < total
+    })
+@app.route('/gallery')
+def gallery():
+    return render_template('gallery.html')
+
+@app.route('/sleep_series/<int:member_id>', methods=['GET'])
+def sleep_series(member_id):
+    # for chart (last 30 days)
+    conn = get_db_connection()
+    rows = conn.execute("""
+        SELECT date, duration_minutes, quality
+        FROM sleep_logs
+        WHERE member_id = ?
+        ORDER BY date
+        LIMIT 60
+    """, (member_id,)).fetchall()
+    conn.close()
+
+    series = [{
+        "date": r["date"],
+        "hours": round(r["duration_minutes"] / 60.0, 2),
+        "quality": r["quality"]
+    } for r in rows]
+
+    return jsonify(series)
+
+@app.route('/training_drills_events/<int:member_id>', methods=['GET'])
+def training_drills_events(member_id):
+    conn = get_db_connection()
+    rows = conn.execute('''
+        SELECT id, date, drill, duration
+        FROM training_drills
+        WHERE member_id = ?
+        ORDER BY date
+    ''', (member_id,)).fetchall()
+    conn.close()
+
+    # FullCalendar expects: [{ title, start, ... }]
+    events = [{
+        "id": row["id"],
+        "title": f'{row["drill"]} ({row["duration"]} min)',
+        "start": row["date"],  # YYYY-MM-DD
+        "allDay": True
+    } for row in rows]
+
+    return jsonify(events)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -551,14 +596,22 @@ def login():
         password = request.form['password']
         conn = get_db_connection()
         try:
-            # Check the users table for a matching username and password
-            user = conn.execute('SELECT * FROM users WHERE name = ? AND password = ?', (username, password)).fetchone()
+            user = conn.execute(
+                'SELECT * FROM users WHERE name = ? AND password = ?',
+                (username, password)
+            ).fetchone()
 
             if user:
+                # sqlite3.Row -> use [] or wrap as dict
+                # If the column doesn't exist yet (pre-migration), default to approved.
+                is_approved = dict(user).get('is_approved', 1)
+
+                if is_approved == 0:
+                    flash('Your account is pending approval. Please try again later.', 'warning')
+                    return redirect(url_for('login'))
+
                 session['user_id'] = user['id']
                 session['user_name'] = user['name']
-
-                # Redirect all users to the main page
                 flash('Login successful!', 'success')
                 return redirect(url_for('main'))
             else:
@@ -567,7 +620,66 @@ def login():
             conn.close()
 
     return render_template('login.html')
+
 import time
+@app.route('/pending-users', methods=['GET'])
+def pending_users():
+    if 'user_id' not in session:
+        return jsonify({'users': []}), 200
+    # (Optional) verify the session user is a Manager, if you store roles on users
+    conn = get_db_connection()
+    rows = conn.execute('SELECT id, name, email FROM users WHERE IFNULL(is_approved,0) = 0').fetchall()
+    conn.close()
+    return jsonify({'users': [dict(r) for r in rows]})
+
+@app.route('/approve-user/<int:user_id>', methods=['POST'])
+def approve_user(user_id):
+    if 'user_id' not in session:
+        return jsonify({'ok': False, 'error': 'Unauthorized'}), 403
+
+    conn = get_db_connection()
+
+    # Approve the user
+    conn.execute(
+        'UPDATE users SET is_approved = 1 WHERE id = ?',
+        (user_id,)
+    )
+
+    # Get the user's name (or other details for the team_members table)
+    user = conn.execute(
+        'SELECT name FROM users WHERE id = ?',
+        (user_id,)
+    ).fetchone()
+
+    if user:
+        # Check if they are already in team_members to avoid duplicates
+        existing = conn.execute(
+            'SELECT id FROM team_members WHERE user_id = ?',
+            (user_id,)
+        ).fetchone()
+
+        if not existing:
+            conn.execute(
+                'INSERT INTO team_members (user_id, name) VALUES (?, ?)',
+                (user_id, user['name'])
+            )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'ok': True})
+
+
+@app.route('/reject-user/<int:user_id>', methods=['POST'])
+def reject_user(user_id):
+    if 'user_id' not in session:
+        return jsonify({'ok': False, 'error': 'Unauthorized'}), 403
+    conn = get_db_connection()
+    # Simple reject = delete user; or you could add a status column instead
+    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -596,8 +708,8 @@ def register():
         try:
             # Insert the new user into the users table
             conn.execute(
-                'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-                (username, email, password)
+                'INSERT INTO users (name, email, password, is_approved) VALUES (?, ?, ?, ?)',
+                (username, email, password, 0)
             )
             # Get the user ID of the newly inserted user
             user_id = conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()['id']
@@ -639,32 +751,39 @@ def training_drills(member_id):
         'drills': [dict(drill) for drill in drills],
         'has_more': offset + limit < total_drills  # Check if there are more rows to load
     })
-
 @app.route('/record_history/<int:member_id>', methods=['GET'])
 def record_history(member_id):
-    limit = int(request.args.get('limit', 7))  # Default to 7 rows
-    offset = int(request.args.get('offset', 0))  # Default to the first page
+    limit = int(request.args.get('limit', 7))
+    offset = int(request.args.get('offset', 0))
 
     conn = get_db_connection()
     try:
         records = conn.execute('''
-            SELECT distance, time, date
+            SELECT time, date
             FROM best_scores
             WHERE member_id = ?
+              AND CAST(distance AS REAL) BETWEEN 4.95 AND 5.05
+            ORDER BY date
             LIMIT ? OFFSET ?
         ''', (member_id, limit, offset)).fetchall()
 
-        total_records = conn.execute('SELECT COUNT(*) FROM best_scores WHERE member_id = ?', (member_id,)).fetchone()[0]
+        total_records = conn.execute('''
+            SELECT COUNT(*)
+            FROM best_scores
+            WHERE member_id = ?
+              AND CAST(distance AS REAL) BETWEEN 4.95 AND 5.05
+        ''', (member_id,)).fetchone()[0]
 
         return jsonify({
             'records': [dict(record) for record in records],
-            'has_more': offset + limit < total_records  # Check if there are more rows
+            'has_more': offset + limit < total_records
         })
     except Exception as e:
         print(f"Error in /record_history: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
+
 
 
 
@@ -675,50 +794,250 @@ def logout():
     return redirect(url_for('login'))
 @app.route('/team_members', methods=['GET'])
 def team_members():
-    page = int(request.args.get('page', 1))  # Default to page 1
-    limit = int(request.args.get('limit', 6))  # Default to 6 members per page
+    page = int(request.args.get('page', 1))
+    limit = int(request.args.get('limit', 6))
     offset = (page - 1) * limit
 
+    # read sort params from query
+    sort = (request.args.get('sort') or 'name').lower()
+    direction = (request.args.get('dir') or 'asc').lower()
+    direction = 'DESC' if direction == 'desc' else 'ASC'
+
+    # only allow known columns to prevent SQL injection
+    sort_map = {
+        'name': 'tm.name',
+        'role': 'tm.role',
+        'created': 'tm.id',          # use id as "recently added" if you don't have created_at
+        'best_time': 'bt.best_time'  # from subquery below
+    }
+    order_col = sort_map.get(sort, 'tm.name')
+
     conn = get_db_connection()
-    members = conn.execute('''
-        SELECT * FROM team_members
+
+    # LEFT JOIN a subquery to get each member’s best 5k time
+    # only include members whose owning user is approved
+    # handle NULLS for best_time so they sort to the end on ASC
+    if order_col == 'bt.best_time' and direction == 'ASC':
+        order_clause = 'CASE WHEN bt.best_time IS NULL THEN 1 ELSE 0 END, bt.best_time ASC'
+    elif order_col == 'bt.best_time' and direction == 'DESC':
+        order_clause = 'CASE WHEN bt.best_time IS NULL THEN 1 ELSE 0 END, bt.best_time DESC'
+    else:
+        order_clause = f'{order_col} {direction}'
+
+    members = conn.execute(f'''
+        SELECT tm.*, bt.best_time
+        FROM team_members tm
+        JOIN users u ON u.id = tm.user_id
+        LEFT JOIN (
+            SELECT member_id, MIN(time) AS best_time
+            FROM best_scores
+            WHERE ABS(distance - 5.0) < 0.01
+            GROUP BY member_id
+        ) bt ON bt.member_id = tm.id
+        WHERE COALESCE(u.is_approved, 0) = 1
+        ORDER BY {order_clause}
         LIMIT ? OFFSET ?
     ''', (limit, offset)).fetchall()
 
-    total_members = conn.execute('SELECT COUNT(*) FROM team_members').fetchone()[0]
+    total_members = conn.execute('''
+        SELECT COUNT(*)
+        FROM team_members tm
+        JOIN users u ON u.id = tm.user_id
+        WHERE COALESCE(u.is_approved, 0) = 1
+    ''').fetchone()[0]
+
     conn.close()
 
     return jsonify({
-        'members': [dict(member) for member in members],
+        'members': [dict(m) for m in members],
         'has_more': offset + limit < total_members
     })
-
 
 @app.route('/save_coach_notes', methods=['POST'])
 def save_coach_notes():
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 403
 
-    data = request.get_json()
+    conn = get_db_connection()
+    try:
+        # enforce role check
+        role = conn.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+        if not role or role['role'] != 'Manager':
+            return jsonify({'success': False, 'error': 'Only managers can save coach notes'}), 403
+
+        data = request.get_json()
+        existing = conn.execute(
+            'SELECT id FROM coach_notes WHERE user_id = ?',
+            (session['user_id'],)
+        ).fetchone()
+
+        if existing:
+            conn.execute('''
+                UPDATE coach_notes
+                SET reminder = ?, race_date = ?, race_time = ?, location = ?, weather = ?, requirements = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+            ''', (data['reminder'], data['race_date'], data['race_time'],
+                  data['location'], data['weather'], data['requirements'], session['user_id']))
+        else:
+            conn.execute('''
+                INSERT INTO coach_notes (user_id, reminder, race_date, race_time, location, weather, requirements, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (session['user_id'], data['reminder'], data['race_date'], data['race_time'],
+                  data['location'], data['weather'], data['requirements']))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+@app.route('/chart-data', methods=['GET'])
+def chart_data():
+    gran = (request.args.get('gran') or 'week').lower()
+    if gran not in ('day', 'week', 'month'):
+        gran = 'week'
+
+    if gran == 'day':
+        group_fmt = "%Y-%m-%d"
+        date_from_sql = "date('now','-29 days')"  # last 30 days
+    elif gran == 'week':
+        group_fmt = "%Y-%W"
+        date_from_sql = "date('now','-84 days')"  # ~12 weeks
+    else:
+        group_fmt = "%Y-%m"
+        date_from_sql = "date('now','start of month','-11 months')"  # last 12 months incl. current
+
     conn = get_db_connection()
 
-    existing = conn.execute('SELECT * FROM coach_notes WHERE user_id = ?', (session['user_id'],)).fetchone()
-    if existing:
-        conn.execute('''
-            UPDATE coach_notes
-            SET reminder = ?, race_date = ?, race_time = ?, location = ?, weather = ?, requirements = ?
-            WHERE user_id = ?
-        ''', (data['reminder'], data['race_date'], data['race_time'],
-              data['location'], data['weather'], data['requirements'], session['user_id']))
-    else:
-        conn.execute('''
-            INSERT INTO coach_notes (user_id, reminder, race_date, race_time, location, weather, requirements)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (session['user_id'], data['reminder'], data['race_date'], data['race_time'],
-              data['location'], data['weather'], data['requirements']))
-    conn.commit()
+    # Progress Over Time (approved users only)
+    progress_data = conn.execute(f'''
+        SELECT strftime('{group_fmt}', bs.date) AS grp, AVG(bs.time) AS avg_time
+        FROM best_scores bs
+        JOIN team_members tm ON bs.member_id = tm.id
+        JOIN users u ON u.id = tm.user_id
+        WHERE ABS(bs.distance - 5.0) < 0.01
+          AND bs.date >= {date_from_sql}
+          AND COALESCE(u.is_approved, 0) = 1
+        GROUP BY grp
+        ORDER BY grp
+    ''').fetchall()
+    progress_over_time = {
+        'labels': [row['grp'] for row in progress_data],
+        'times':  [row['avg_time'] for row in progress_data]
+    }
+
+    # Drill Distribution (approved users only)
+    drill_data = conn.execute(f'''
+        SELECT td.drill, COUNT(*) AS count
+        FROM training_drills td
+        JOIN team_members tm ON td.member_id = tm.id
+        JOIN users u ON u.id = tm.user_id
+        WHERE td.date >= {date_from_sql}
+          AND COALESCE(u.is_approved, 0) = 1
+        GROUP BY td.drill
+        ORDER BY count DESC
+    ''').fetchall()
+    drill_distribution = {
+        'drills': [row['drill'] for row in drill_data],
+        'counts': [row['count'] for row in drill_data]
+    }
+
+    # Top Performers (approved users only)
+    top_performers = conn.execute(f'''
+        SELECT tm.name, MIN(bs.time) AS best_time
+        FROM best_scores bs
+        JOIN team_members tm ON bs.member_id = tm.id
+        JOIN users u ON u.id = tm.user_id
+        WHERE ABS(bs.distance - 5.0) < 0.01
+          AND bs.date >= {date_from_sql}
+          AND COALESCE(u.is_approved, 0) = 1
+        GROUP BY tm.name
+        HAVING best_time IS NOT NULL
+        ORDER BY best_time ASC
+        LIMIT 5
+    ''').fetchall()
+    top_performers_data = {
+        'names': [r['name'] for r in top_performers],
+        'times': [r['best_time'] for r in top_performers]
+    }
+
+    # Goal Completion (approved users only, overall)
+    goal_rows = conn.execute('''
+        SELECT tm.name,
+               tm.target_time_5km AS target_time,
+               MIN(bs.time) AS best_time
+        FROM team_members tm
+        JOIN users u ON u.id = tm.user_id
+        LEFT JOIN best_scores bs
+          ON tm.id = bs.member_id AND ABS(bs.distance - 5.0) < 0.01
+        WHERE COALESCE(u.is_approved, 0) = 1
+        GROUP BY tm.id
+    ''').fetchall()
+
+    def pct(target, best):
+        if target is None or best is None or target <= 0:
+            return 0
+        return min(100.0, max(0.0, (target / best) * 100.0))
+
+    goal_completion_data = {
+        'names': [r['name'] for r in goal_rows],
+        'percentages': [pct(r['target_time'], r['best_time']) for r in goal_rows]
+    }
+
     conn.close()
-    return jsonify({'success': True})
+    return jsonify({
+        'gran': gran,
+        'progress_over_time': progress_over_time,
+        'drill_distribution': drill_distribution,
+        'top_performers': top_performers_data,
+        'goal_completion': goal_completion_data
+    })
+
+
+@app.route('/leader-data', methods=['GET'])
+def leader_data():
+    conn = get_db_connection()
+
+    # Overall fastest 5k (approved users only)
+    overall = conn.execute('''
+        SELECT tm.name, MIN(bs.time) AS best_time
+        FROM best_scores bs
+        JOIN team_members tm ON bs.member_id = tm.id
+        JOIN users u ON u.id = tm.user_id
+        WHERE ABS(bs.distance - 5.0) < 0.01
+          AND COALESCE(u.is_approved, 0) = 1
+        GROUP BY tm.name
+        ORDER BY best_time ASC
+        LIMIT 5
+    ''').fetchall()
+    total_top = {
+        'names': [r['name'] for r in overall],
+        'times': [r['best_time'] for r in overall]
+    }
+
+    # This month's fastest 5k (approved users only)
+    current_month = conn.execute('SELECT strftime("%Y-%m", "now")').fetchone()[0]
+    monthly = conn.execute('''
+        SELECT tm.name, MIN(bs.time) AS best_time
+        FROM best_scores bs
+        JOIN team_members tm ON bs.member_id = tm.id
+        JOIN users u ON u.id = tm.user_id
+        WHERE ABS(bs.distance - 5.0) < 0.01
+          AND strftime("%Y-%m", bs.date) = ?
+          AND COALESCE(u.is_approved, 0) = 1
+        GROUP BY tm.name
+        ORDER BY best_time ASC
+        LIMIT 5
+    ''', (current_month,)).fetchall()
+    monthly_top = {
+        'names': [r['name'] for r in monthly],
+        'times': [r['best_time'] for r in monthly]
+    }
+
+    conn.close()
+    return jsonify({
+        'top_performers': total_top,
+        'monthly_top_performers': monthly_top
+    })
+
 
 if __name__ == '__main__':
     # init_db()

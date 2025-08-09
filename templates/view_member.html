@@ -2,645 +2,845 @@
 
 {% block content %}
 <style>
-    body {
-        background-color: #121212;
-        color: #fff;
-        font-family: Arial, sans-serif;
-    }
-    h3 {
-        color: #fff;
-    }
-    .card {
-        background-color: #1e1e1e;
-        border: none;
-        border-radius: 15px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    .card:hover {
-        transform: scale(1.05);
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.5);
-    }
-    .card-body {
-        padding: 20px;
-    }
-    .card-title {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #fff;
-    }
-    .card-text {
-        color: #bbb;
-        font-size: 1rem;
-    }
-    .btn {
-        background-color: #333;
-        border: 1px solid #555;
-        color: #fff;
-        border-radius: 25px;
-        transition: background-color 0.3s ease, color 0.3s ease;
-    }
-    .btn:hover {
-        background-color: #555;
-        color: #fff;
-    }
-    .modal-content {
-        background-color: #1e1e1e;
-        color: #fff;
-        border-radius: 10px;
-    }
-    .modal-header, .modal-footer {
-        border: none;
-    }
-    .modal-body label {
-        color: #ccc;
-    }
-    th[data-sort] {
-    cursor: pointer; /* Change cursor to pointer for sortable columns */
-}
+    body { background-color: #121212; color: #fff; font-family: Arial, sans-serif; }
+    h3 { color: #fff; }
+    .card { background-color: #1e1e1e; border: none; border-radius: 15px; transition: transform .3s, box-shadow .3s; }
+    .card:hover { box-shadow: 0 8px 15px rgba(0,0,0,.5); }
+    .card-body { padding: 20px; }
+    .card-title { font-size: 1.5rem; font-weight: bold; color: #fff; }
+    .card-text { color: #bbb; font-size: 1rem; }
+    .btn { background-color: #333; border: 1px solid #555; color: #fff; border-radius: 25px; transition: background-color .3s, color .3s; }
+    .btn:hover { background-color: #555; color: #fff; }
+    .modal-content { background-color: #1e1e1e; color: #fff; border-radius: 10px; }
+    .modal-header, .modal-footer { border: none; }
+    .modal-body label { color: #ccc; }
+    th[data-sort] { cursor: pointer; }
+    .form-control { background-color: #333; color: #fff; border: 1px solid #555; }
+    .form-control:focus { background-color: #333; color: #fff; border-color: #777; box-shadow: none; }
+    table { color: #fff; }
+    table thead { color: #ccc; }
+    .highlight-row { background-color: #ffcc00 !important; color: white; font-weight: bold; border: 2px solid #fff; }
+    .list-group-item { border-radius: 5px; margin-bottom: 5px; }
+    .list-group-item:hover { background-color: #343a40; color: #f8f9fa; }
+    .form-control::placeholder { color: #fff; opacity: 1; }
+    #pre-race-tips { color: white; }
 
-    .form-control {
-        background-color: #333;
-        color: #fff;
-        border: 1px solid #555;
+    /* FullCalendar (scoped) */
+    #drillCalendar .fc {
+      --fc-page-bg-color:#121212!important; --fc-neutral-bg-color:#1e1e1e!important; --fc-list-event-hover-bg-color:#262626!important;
+      --fc-border-color:#333!important; --fc-small-font-size:.9rem!important; --fc-text-color:#e8e8e8!important; --fc-now-indicator-color:#ffcc00!important;
+      --fc-button-text-color:#fff; --fc-button-bg-color:#333; --fc-button-border-color:#555; --fc-button-hover-bg-color:#444; --fc-button-hover-border-color:#777;
+      --fc-button-active-bg-color:#555; --fc-button-active-border-color:#999; --fc-today-bg-color:rgba(255,204,0,.08);
+      --fc-event-bg-color:#03a9f4; --fc-event-border-color:#03a9f4; --fc-event-text-color:#fff; --fc-border-color:rgba(255,255,255,.1)!important;
     }
-    .form-control:focus {
-        background-color: #333;
-        color: #fff;
-        border-color: #777;
-        box-shadow: none;
-    }
-    table {
-        color: #fff;
-    }
-    table thead {
-        color: #ccc;
-    }
-    .highlight-row {
-        background-color: #ffcc00 !important;
-        color: white;
-        font-weight: bold;
-        border: 2px solid #fff;
-    }
-    .list-group-item {
-    border-radius: 5px;
-    margin-bottom: 5px;
-}
-.list-group-item:hover {
-    background-color: #343a40;
-    color: #f8f9fa;
-}
-    .form-control::placeholder {
-    color: #fff; /* Set the placeholder color to white */
-    opacity: 1; /* Ensure the placeholder color is not faded */
-}
+    #drillCalendar .fc .fc-daygrid-day { background-color: #1e1e1e !important; }
+    #drillCalendar .fc .fc-daygrid-day-number { color: #e8e8e8 !important; }
+    .fc-daygrid-day-events, fc-daygrid-day-top { cursor:pointer !important; }
+    .fc-col-header-cell-cushion { color:black !important; text-decoration: none !important; }
+    .fc-daygrid-day-number { color:white !important; text-decoration: none !important; }
+    #drillCalendar .fc .fc-list-day-cushion { background:#222!important; color:#f0f0f0!important; border-color:#333!important; }
+    #drillCalendar .fc .fc-event { border-radius: 10px !important; box-shadow: 0 2px 6px rgba(0,0,0,.25) !important; }
+    #drillCalendar .fc .fc-toolbar-title { color: #fff !important; }
 
-.form-control:-ms-input-placeholder { /* For Internet Explorer */
-    color: #fff;
-}
-
-.form-control::-ms-input-placeholder { /* For Microsoft Edge */
-    color: #fff;
-}
-    #pre-race-tips{
-        color:white;
-    }
-
+    /* goal ring */
+    .goal-card { background: linear-gradient(180deg, #1e1e1e, #181818); border-radius: 16px; border: 1px solid #2a2a2a; }
+    .radial-wrap { width: 140px; height: 140px; display: grid; place-items: center; }
+    .radial { --value:0; width: 120px; height: 120px; border-radius: 50%; position: relative;
+      background: conic-gradient(#36a2eb calc(var(--value)*1%), #2b2b2b 0); display: grid; place-items: center; }
+    .radial::before { content: ""; position: absolute; inset: 8px; background:#121212; border-radius:50%; box-shadow: inset 0 0 0 1px #2a2a2a; }
+    .radial-center { position: relative; text-align: center; z-index: 1; }
+    .radial-value { font-size: 1.25rem; font-weight: 700; color: #fff; line-height: 1.2; }
+    .radial-label { font-size: .8rem; color: #9aa0a6; }
+    .stat-label { font-size: .8rem; color: #9aa0a6; }
+    .stat-value { font-size: 1.1rem; color: #fff; margin-top: .15rem; }
+    .stat-unit { font-size: .8rem; color: #9aa0a6; }
 </style>
 
 <div class="container mt-5">
-    <div class="row">
-        <!-- Profile Card (4 columns) -->
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-body text-center">
-                    {% if member.image %}
-                        <img src="{{ url_for('static', filename='images/profiles/' + member.image) }}"
-                             alt="{{ member.name }}'s profile image"
-                             class="img-fluid rounded-circle mb-3"
-                             style="width: 100px; height: 100px; object-fit: cover;">
-                    {% else %}
-                        <img src="{{ url_for('static', filename='images/profile.webp') }}"
-                             alt="Default profile image"
-                             class="img-fluid rounded-circle mb-3"
-                             style="width: 100px; height: 100px; object-fit: cover;">
-                    {% endif %}
-                    <h5 class="card-title">{{ member.name }}</h5>
-                    <p class="card-text"><strong>Role:</strong> {{ member.role }}</p>
-                    <p class="card-text"><strong>Email:</strong> {{ member.email }}</p>
-                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Team</a>
-                </div>
-            </div>
+  <div class="row">
+    <!-- Profile Card -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-body text-center">
+          {% if member.image %}
+            <img src="{{ url_for('static', filename='images/profiles/' + member.image) }}"
+                 alt="{{ member.name }}'s profile image"
+                 class="img-fluid rounded-circle mb-3"
+                 style="width:100px;height:100px;object-fit:cover;">
+          {% else %}
+            <img src="{{ url_for('static', filename='images/profile.webp') }}"
+                 alt="Default profile image"
+                 class="img-fluid rounded-circle mb-3"
+                 style="width:100px;height:100px;object-fit:cover;">
+          {% endif %}
+          <h5 class="card-title">{{ member.name }}</h5>
+          <p class="card-text"><strong>Role:</strong> {{ member.role }}</p>
+          <p class="card-text"><strong>Email:</strong> {{ member.email }}</p>
+          <a href="{{ url_for('main') }}" class="btn btn-secondary">Back to Team</a>
         </div>
-<div class="col-lg-8 mt-4">
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title text-center">Set Your Monthly Running Goal</h5>
-            <p class="card-text text-center"><strong>Target 5km Time:</strong> {{ member.target_time_5km }} minutes</p>
+      </div>
+    </div>
 
-            <!-- Progress Bar -->
-            <strong>Best Time:</strong> {{ best_time }} min / Target: {{ member.target_time_5km }} min
-<!--            <div class="progress mb-3">-->
-<!--                <div class="progress-bar" role="progressbar"-->
-<!--                     style="width: {{ (total_distance / member.goal_target) * 100 if member.goal_target else 0 }}%;"-->
-<!--                     aria-valuenow="{{ total_distance }}"-->
-<!--                     aria-valuemin="0"-->
-<!--                     aria-valuemax="{{ member.goal_target }}">-->
-<!--                    {{ ((total_distance / member.goal_target) * 100 if member.goal_target else 0) | round(1) }}%-->
-<!--                </div>-->
-<!--            </div>-->
-
-            <!-- Cheer-Up Comments -->
-            <div class="text-center mt-3">
-                {% set progress_percentage = (total_distance / member.goal_target) * 100 if member.goal_target else 0 %}
-                {% if progress_percentage == 0 %}
-                    <p>Let's get started! Every step counts toward your goal!</p>
-                {% elif progress_percentage < 25 %}
-                    <p>You're off to a great start! Keep moving!</p>
-                {% elif progress_percentage < 50 %}
-                    <p>Almost halfway there! You're doing amazing!</p>
-                {% elif progress_percentage < 75 %}
-                    <p>Great progress! Keep pushing—you're closer than you think!</p>
-                {% elif progress_percentage < 100 %}
-                    <p>You're almost there! Just a little more effort!</p>
-                {% elif progress_percentage >= 100 %}
-                    <p>Congratulations! You've achieved your goal! 🎉</p>
-                {% endif %}
+    <!-- Goal card -->
+    <div class="col-lg-8 mt-4">
+      <div class="card goal-card" id="goalCard"
+           data-best="{{ best_time if best_time is not none else '' }}"
+           data-target="{{ member.target_time_5km if member.target_time_5km else '' }}">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center gap-4 flex-wrap">
+            <div class="radial-wrap">
+              <div class="radial" id="goalRadial">
+                <div class="radial-center">
+                  <div class="radial-value" id="goalPct">0%</div>
+                  <div class="radial-label">Completion</div>
+                </div>
+              </div>
             </div>
 
-            <!-- Change Goal Button -->
-            <div class="text-center mt-3">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changeGoalModal">
-                    Change Goal
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <h5 class="card-title mb-0">Monthly 5k Goal</h5>
+                <button type="button" class="btn btn-sm btn-primary px-3" data-bs-toggle="modal" data-bs-target="#changeGoalModal">
+                  Change Goal
                 </button>
-            </div>
-        </div>
-    </div>
-</div>
+              </div>
 
-        <div class="modal fade" id="changeGoalModal" tabindex="-1" aria-labelledby="changeGoalModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="changeGoalModalLabel">Change Monthly Goal</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{{ url_for('set_goal', member_id=member.id) }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="newGoal" class="form-label">Target 5km Time (minutes)</label>
-                        <input type="number" class="form-control" id="newGoal" name="target_time" step="0.1" min="1" required>
+              <div class="row g-3 mt-2">
+                <div class="col-6 col-md-4">
+                  <div class="stat">
+                    <div class="stat-label">Best 5k</div>
+                    <div class="stat-value">
+                      {% if best_time is not none %}{{ '%.2f'|format(best_time) }} <span class="stat-unit">min</span>
+                      {% else %} — {% endif %}
                     </div>
+                  </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Goal</button>
+                <div class="col-6 col-md-4">
+                  <div class="stat">
+                    <div class="stat-label">Target</div>
+                    <div class="stat-value">
+                      {% if member.target_time_5km %}{{ '%.2f'|format(member.target_time_5km) }} <span class="stat-unit">min</span>
+                      {% else %} — {% endif %}
+                    </div>
+                  </div>
                 </div>
-            </form>
+                <div class="col-12 col-md-4">
+                  <div class="stat">
+                    <div class="stat-label">Delta (Best - Target)</div>
+                    <div class="stat-value">
+                      {% if best_time is not none and member.target_time_5km %}
+                        {% set delta = (best_time - member.target_time_5km) %}
+                        <span class="badge rounded-pill {{ 'bg-success' if delta <= 0 else 'bg-warning text-dark' }}">
+                          {{ ('%.2f'|format(delta)) }} min
+                        </span>
+                      {% else %}
+                        <span class="badge rounded-pill bg-secondary">N/A</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-3 small text-white-50" id="goalMessage">
+                {% if best_time is none %}
+                  Log a 5k result to start tracking progress toward your target.
+                {% elif member.target_time_5km %}
+                  Calculating progress…
+                {% else %}
+                  Set a target time to see your progress ring.
+                {% endif %}
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
-</div>
+
+    <!-- Change Goal Modal -->
+    <div class="modal fade" id="changeGoalModal" tabindex="-1" aria-labelledby="changeGoalModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="changeGoalModalLabel">Change Monthly Goal</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <form method="POST" action="{{ url_for('set_goal', member_id=member.id) }}">
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="newGoal" class="form-label">Target 5km Time (minutes)</label>
+                <input type="number" class="form-control" id="newGoal" name="target_time" step="0.1" min="1" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Update Goal</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
-    </div>
-<div class="card mt-3">
-    <div class="card-body">
-        <h3>AI 5km Record Prediction</h3>
-        <p id="recommendation-text" class="card-text">Loading recommendation...</p>
-        <ul id="recommendation-list" class="list-group list-group-flush mt-3" style="display: none;">
-            <!-- This will be populated dynamically -->
-        </ul>
-                <h3 class="mt-5 mb-2">Pre-Race Day Tips</h3>
-        <p class="card-text" id="pre-race-tips" >Loading tips...</p>
-    </div>
+
+  </div>
 </div>
 
-    <h3 class="mt-5">Personal Analysis</h3>
+<!-- AI panel -->
+<div class="card mt-3">
+  <div class="card-body">
+    <h3>AI 5km Record Prediction</h3>
+    <p id="recommendation-text" class="card-text">Loading recommendation...</p>
+    <ul id="recommendation-list" class="list-group list-group-flush mt-3" style="display:none;"></ul>
+
+    <h3 class="mt-5 mb-2">Pre-Race Day Tips</h3>
+    <p class="card-text" id="pre-race-tips">Loading tips...</p>
+  </div>
+</div>
+
+<h3 class="mt-5">Personal Analysis</h3>
 
 <div class="row mt-3">
-    <!-- Progress Over Time Chart -->
-    <div class="col-lg-6 d-flex align-items-stretch">
-        <div class="card w-100" style="max-height: 450px;">
-            <div class="card-body d-flex flex-column justify-content-center align-items-center p-3">
-                <h5 class="card-title text-center">Progress Over Time</h5>
-                <div class="w-100" style="max-width: 90%; height: 350px; display: flex; justify-content: center; align-items: center;">
-                    <canvas id="progressChart"></canvas>
-                </div>
-            </div>
+  <!-- Progress chart -->
+  <div class="col-lg-6 d-flex align-items-stretch">
+    <div class="card w-100" style="max-height: 450px;">
+      <div class="card-body d-flex flex-column justify-content-center align-items-center p-3">
+        <h5 class="card-title text-center">5km Record Over Time</h5>
+        <div class="w-100" style="max-width:90%;height:350px;display:flex;justify-content:center;align-items:center;">
+          <canvas id="progressChart"></canvas>
+          <small class="text-white" id="progressEmptyMsg" style="display:none;">No 5km records yet.</small>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Drill Distribution Chart -->
-    <div class="col-lg-6 d-flex align-items-stretch">
-        <div class="card w-100" style="max-height: 450px;">
-            <div class="card-body d-flex flex-column justify-content-center align-items-center p-3">
-                <h5 class="card-title text-center">Drill Distribution</h5>
-                <div class="w-100" style="max-width: 90%; height: 350px; display: flex; justify-content: center; align-items: center;">
-                    <canvas id="drillDistributionChart"></canvas>
-                </div>
-            </div>
+  <!-- Drill distribution -->
+  <div class="col-lg-6 d-flex align-items-stretch">
+    <div class="card w-100" style="max-height: 450px;">
+      <div class="card-body d-flex flex-column justify-content-center align-items-center p-3">
+        <h5 class="card-title text-center">Drill Distribution</h5>
+        <div class="w-100" style="max-width:90%;height:350px;display:flex;justify-content:center;align-items:center;">
+          <canvas id="drillDistributionChart"></canvas>
+          <small class="text-white" id="drillEmptyMsg" style="display:none;">No drills logged yet.</small>
         </div>
+      </div>
     </div>
+  </div>
 </div>
-<h3 class="mt-5">Training Drills</h3>
-<table class="table table-dark table-striped mt-3" id="trainingDrillsTable">
-    <thead>
-        <tr>
-            <th data-sort="asc" onclick="sortTable('trainingDrillsTable', 0)">Date <span>&#x2195;</span></th>
-            <th>Drill</th>
-            <th data-sort="asc" onclick="sortTable('trainingDrillsTable', 2)">Duration (min) <span>&#x2195;</span></th>
-        </tr>
-    </thead>
-    <tbody>
-        <!-- Initial rows will be inserted here -->
-    </tbody>
-</table>
-<button class="btn btn-primary mt-3" id="loadMoreDrills">View More</button>
-    <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addDrillModal">Add New Drill</button>
+
+<h3 class="mt-5">Drills Calendar</h3>
+<div class="card">
+  <div class="card-body">
+    <div id="drillCalendar"></div>
+    <div id="calendarEmptyMsg" class="text-center text-white-50 mt-3" style="display:none;">
+      No drills scheduled yet. Click a date to add one.
+    </div>
+  </div>
+</div>
 
 <h3 class="mt-5">Record History</h3>
 <table class="table table-dark table-striped mt-3" id="recordHistoryTable">
-    <thead>
-        <tr>
-            <th data-sort="asc" onclick="sortTable('recordHistoryTable', 0)">Distance (km) <span>&#x2195;</span></th>
-            <th data-sort="asc" onclick="sortTable('recordHistoryTable', 1)">Best Time (min) <span>&#x2195;</span></th>
-            <th data-sort="asc" onclick="sortTable('recordHistoryTable', 2)">Date <span>&#x2195;</span></th>
-        </tr>
-    </thead>
-    <tbody>
-        <!-- Rows will be dynamically inserted here -->
-    </tbody>
+  <thead>
+    <tr>
+      <th data-sort="asc" onclick="sortTable('recordHistoryTable', 0)">Best Time (min) <span>&#x2195;</span></th>
+      <th data-sort="asc" onclick="sortTable('recordHistoryTable', 1)">Date <span>&#x2195;</span></th>
+    </tr>
+  </thead>
+  <tbody></tbody>
 </table>
+<small class="text-white" id="recordsEmptyMsg" style="display:none;">No 5km records yet.</small>
 <button class="btn btn-primary mt-3" id="viewMoreRecords">View More</button>
 
-    <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addScoreModal">Add New Score</button>
-</div>
-<div class="modal fade" id="addDrillModal" tabindex="-1" aria-labelledby="addDrillModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addDrillModalLabel">Add New Drill</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{{ url_for('add_drill', member_id=member.id) }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="drillDate" class="form-label">Date</label>
-                        <input type="date" class="form-control" id="drillDate" name="date" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="drillType" class="form-label">Drill</label>
-                        <select class="form-select" id="drillType" name="drill" onchange="toggleOtherDrillInput()" required>
-                            <option value="Endurance">Endurance</option>
-                            <option value="Speed Training">Speed Training</option>
-                            <option value="Hill Repeats">Hill Repeats</option>
-                            <option value="Interval Training">Interval Training</option>
-                            <option value="Other">Other</option>
-                        </select>
-                        <input type="text" class="form-control mt-3 d-none" id="otherDrill" name="other_drill" placeholder="Enter your custom drill">
-                    </div>
-                    <div class="mb-3">
-                        <label for="drillDuration" class="form-label">Duration (min)</label>
-                        <input type="number" class="form-control" id="drillDuration" name="duration" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Add Drill</button>
-                </div>
-            </form>
+<button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addScoreModal">Add New Score</button>
+
+<h3 class="mt-5">Sleep Log</h3>
+<div class="row mt-3">
+  <!-- Sleep chart -->
+  <div class="col-lg-6 d-flex align-items-stretch">
+    <div class="card w-100" style="max-height: 450px;">
+      <div class="card-body d-flex flex-column justify-content-center align-items-center p-3">
+        <h5 class="card-title text-center">Hours Slept Over Time</h5>
+        <div class="w-100" style="max-width:90%;height:350px;display:flex;justify-content:center;align-items:center;">
+          <canvas id="sleepChart"></canvas>
+          <small class="text-white" id="sleepEmptyMsg" style="display:none;">No sleep logs yet.</small>
         </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Sleep table -->
+  <div class="col-lg-6 d-flex align-items-stretch">
+    <div class="card w-100">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="card-title mb-0">Recent Sleep Entries</h5>
+          <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSleepModal">Add Sleep</button>
+        </div>
+
+        <!-- Empty message (centered vertically) -->
+<!--        <div id="sleepTableEmptyMsg" class="flex-grow-1 d-flex align-items-center justify-content-center" style="display:none;min-height:0px;">-->
+<!--&lt;!&ndash;          <small class="text-white">No sleep logs yet.</small>&ndash;&gt;-->
+<!--        </div>-->
+
+        <!-- Table -->
+        <div class="table-responsive" id="sleepTableWrapper">
+          <table class="table table-dark table-striped mb-0" id="sleepTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Bed</th>
+                <th>Wake</th>
+                <th>Hours</th>
+                <th>Q</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+<!--        <div class="mt-2">-->
+<!--          <button class="btn btn-secondary btn-sm" id="loadMoreSleep">View More</button>-->
+<!--        </div>-->
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- Modal for Adding Score -->
-<div class="modal fade" id="addScoreModal" tabindex="-1" aria-labelledby="addScoreModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addScoreModalLabel">Add New Record</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{{ url_for('add_score', member_id=member.id) }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="scoreDistance" class="form-label">Distance</label>
-                        <input type="text" class="form-control" id="scoreDistance" name="distance" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="scoreTime" class="form-label">Best Time (min)</label>
-                        <input type="number" class="form-control" id="scoreTime" name="time" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="scoreDate" class="form-label">Date</label>
-                        <input type="date" class="form-control" id="scoreDate" name="date" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Add Score</button>
-                </div>
-            </form>
+<!-- Add Sleep Modal -->
+<div class="modal fade" id="addSleepModal" tabindex="-1" aria-labelledby="addSleepModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:#1e1e1e;color:#fff;">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addSleepModalLabel">Add Sleep Log</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('add_sleep', member_id=member.id) }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Date (bedtime day)</label>
+            <input type="date" class="form-control" name="sleep_date" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Bedtime</label>
+            <input type="time" class="form-control" name="bedtime" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Wake time</label>
+            <input type="time" class="form-control" name="waketime" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Quality (1–5)</label>
+            <select class="form-select" name="quality">
+              <option value="">—</option>
+              <option>1</option><option>2</option><option>3</option>
+              <option>4</option><option>5</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" name="notes" rows="2" placeholder="Restlessness, naps, caffeine…"></textarea>
+          </div>
+          <small class="text-white">If wake time is earlier than bedtime, it counts as the next day automatically.</small>
         </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
     </div>
+  </div>
+</div>
+
+<!-- Add Drill Modal -->
+<div class="modal fade" id="addDrillModal" tabindex="-1" aria-labelledby="addDrillModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addDrillModalLabel">Add New Drill</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('add_drill', member_id=member.id) }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="drillDate" class="form-label">Date</label>
+            <input type="date" class="form-control" id="drillDate" name="date" required>
+          </div>
+          <div class="mb-3">
+            <label for="drillType" class="form-label">Drill</label>
+            <select class="form-select" id="drillType" name="drill" onchange="toggleOtherDrillInput()" required>
+              <option value="Endurance">Endurance</option>
+              <option value="Speed Training">Speed Training</option>
+              <option value="Hill Repeats">Hill Repeats</option>
+              <option value="Interval Training">Interval Training</option>
+              <option value="Other">Other</option>
+            </select>
+            <input type="text" class="form-control mt-3 d-none" id="otherDrill" name="other_drill" placeholder="Enter your custom drill">
+          </div>
+          <div class="mb-3">
+            <label for="drillDuration" class="form-label">Duration (min)</label>
+            <input type="number" class="form-control" id="drillDuration" name="duration" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Add Drill</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Score Modal -->
+<div class="modal fade" id="addScoreModal" tabindex="-1" aria-labelledby="addScoreModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addScoreModalLabel">Add New Record</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('add_score', member_id=member.id) }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="scoreTime" class="form-label">Best Time (min)</label>
+            <input type="number" class="form-control" id="scoreTime" name="time" required>
+          </div>
+          <div class="mb-3">
+            <label for="scoreDate" class="form-label">Date</label>
+            <input type="date" class="form-control" id="scoreDate" name="date" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Add Score</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <script>
 async function fetchRecommendation() {
-    try {
-        const response = await fetch('{{ url_for("get_recommendation", member_id=member.id) }}');
-        const recommendationList = document.getElementById('recommendation-list');
-        const recommendationText = document.getElementById('recommendation-text');
-        const preRaceTips = document.getElementById('pre-race-tips');
+  try {
+    const response = await fetch('{{ url_for("get_recommendation", member_id=member.id) }}');
+    const recommendationList = document.getElementById('recommendation-list');
+    const recommendationText = document.getElementById('recommendation-text');
+    const preRaceTips = document.getElementById('pre-race-tips');
 
-        if (!response.ok) {
-            recommendationText.innerText = 'Failed to load recommendation.';
-            recommendationList.style.display = 'none';
-            preRaceTips.innerText = 'No tips available.';
-            return;
-        }
-
-        const data = await response.json();
-        const fullText = data.full_text || "";
-        const prediction = data.prediction || "";
-        const reason = data.reason || "";
-
-        // Show first two sentences as tips
-        preRaceTips.innerText = `${prediction} ${reason}`.trim();
-
-        // Create bullet points
-        const points = fullText.split('\n').filter(line => line.trim() !== '');
-        recommendationList.innerHTML = '';
-        if (points.length > 0) {
-            points.forEach(point => {
-                const listItem = document.createElement('li');
-                listItem.className = 'list-group-item bg-dark text-light border-secondary';
-                listItem.innerText = point.trim();
-                recommendationList.appendChild(listItem);
-            });
-            recommendationList.style.display = 'block';
-            recommendationText.style.display = 'none';
-        } else {
-            recommendationText.innerText = 'No recommendations available.';
-            recommendationList.style.display = 'none';
-        }
-
-    } catch (error) {
-        console.error(error);
-        const recommendationText = document.getElementById('recommendation-text');
-        recommendationText.innerText = 'Error fetching recommendation.';
-        recommendationList.style.display = 'none';
-        document.getElementById('pre-race-tips').innerText = 'No tips available.';
+    if (!response.ok) {
+      recommendationText.innerText = 'Failed to load recommendation.';
+      recommendationList.style.display = 'none';
+      preRaceTips.innerText = 'No tips available.';
+      return;
     }
+
+    const data = await response.json();
+    const fullText = data.full_text || "";
+    const prediction = data.prediction || "";
+    const reason = data.reason || "";
+
+    const points = fullText.split('\n').filter(line => line.trim() !== '');
+    if ((!prediction && !reason) && points.length === 0) {
+      recommendationText.innerText = 'No recommendations yet.';
+      recommendationList.style.display = 'none';
+      preRaceTips.innerText = 'Add a 5k result and a few drills to get personalized tips.';
+      return;
+    }
+
+    preRaceTips.innerText = `${prediction} ${reason}`.trim();
+
+    recommendationList.innerHTML = '';
+    if (points.length > 0) {
+      points.forEach(point => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item bg-dark text-light border-secondary';
+        li.innerText = point.trim();
+        recommendationList.appendChild(li);
+      });
+      recommendationList.style.display = 'block';
+      recommendationText.style.display = 'none';
+    } else {
+      recommendationText.innerText = 'No recommendations available.';
+      recommendationList.style.display = 'none';
+    }
+  } catch (error) {
+    console.error(error);
+    const recommendationText = document.getElementById('recommendation-text');
+    recommendationText.innerText = 'Error fetching recommendation.';
+    document.getElementById('recommendation-list').style.display = 'none';
+    document.getElementById('pre-race-tips').innerText = 'No tips available.';
+  }
 }
 
-// Optional: attach event listener safely
 const refreshBtn = document.getElementById('refresh-recommendation');
-if (refreshBtn) {
-    refreshBtn.addEventListener('click', fetchRecommendation);
-}
-
-// Load once on page load
+if (refreshBtn) refreshBtn.addEventListener('click', fetchRecommendation);
 fetchRecommendation();
-        function toggleOtherDrillInput() {
-        const drillType = document.getElementById('drillType').value;
-        const otherDrillInput = document.getElementById('otherDrill');
-        if (drillType === 'Other') {
-            otherDrillInput.classList.remove('d-none');
-            otherDrillInput.setAttribute('required', 'true');
-        } else {
-            otherDrillInput.classList.add('d-none');
-            otherDrillInput.removeAttribute('required');
-        }
-    }
+
+function toggleOtherDrillInput() {
+  const drillType = document.getElementById('drillType').value;
+  const otherDrillInput = document.getElementById('otherDrill');
+  if (drillType === 'Other') {
+    otherDrillInput.classList.remove('d-none');
+    otherDrillInput.setAttribute('required', 'true');
+  } else {
+    otherDrillInput.classList.add('d-none');
+    otherDrillInput.removeAttribute('required');
+  }
+}
 </script>
+
 <script>
-    function sortTable(tableId, columnIndex) {
-        const table = document.getElementById(tableId);
-        const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-        const header = table.querySelector(`thead th:nth-child(${columnIndex + 1})`);
-        const sortDirection = header.getAttribute('data-sort') === 'asc' ? 1 : -1;
+function sortTable(tableId, columnIndex) {
+  const table = document.getElementById(tableId);
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const header = table.querySelector(`thead th:nth-child(${columnIndex + 1})`);
+  const sortDirection = header.getAttribute('data-sort') === 'asc' ? 1 : -1;
+  header.setAttribute('data-sort', sortDirection === 1 ? 'desc' : 'asc');
 
-        // Toggle sorting direction
-        header.setAttribute('data-sort', sortDirection === 1 ? 'desc' : 'asc');
+  rows.sort((a, b) => {
+    const aValue = a.children[columnIndex].innerText.trim();
+    const bValue = b.children[columnIndex].innerText.trim();
+    if (columnIndex === 0 || columnIndex === 2) return sortDirection * (new Date(aValue) - new Date(bValue));
+    if (!isNaN(aValue) && !isNaN(bValue)) return sortDirection * (parseFloat(aValue) - parseFloat(bValue));
+    return sortDirection * aValue.localeCompare(bValue);
+  });
 
-        // Sort rows
-        rows.sort((a, b) => {
-            const aValue = a.children[columnIndex].innerText.trim();
-            const bValue = b.children[columnIndex].innerText.trim();
-
-            // For date columns, parse as date
-            if (columnIndex === 0 || columnIndex === 2) { // Adjust index if needed for date columns
-                return sortDirection * (new Date(aValue) - new Date(bValue));
-            }
-
-            // For numeric columns, parse as numbers
-            if (!isNaN(aValue) && !isNaN(bValue)) {
-                return sortDirection * (parseFloat(aValue) - parseFloat(bValue));
-            }
-
-            // For text columns, sort alphabetically
-            return sortDirection * aValue.localeCompare(bValue);
-        });
-
-        // Append sorted rows back to the table body
-        tbody.innerHTML = '';
-        rows.forEach(row => tbody.appendChild(row));
-    }
+  tbody.innerHTML = '';
+  rows.forEach(row => tbody.appendChild(row));
+}
 </script>
-
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-      // Data for Progress Over Time chart
-    const progressData = {
-        labels: {{ progress_dates|tojson }},
-        datasets: [{
-            label: 'Distance (km)',
-            data: {{ progress_values|tojson }},
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 2,
-            fill: true,
-        }]
-    };
+// Progress chart (empty-state aware)
+const dates5k = {{ progress_dates|tojson }};
+const times5k = {{ progress_values|tojson }};
+const progressCanvas = document.getElementById('progressChart');
+const progressEmptyMsg = document.getElementById('progressEmptyMsg');
 
-    // Options for Progress Over Time chart
-    const progressOptions = {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: 'top',
-                labels: {
-                    color: '#ffffff' // White text for legend
-                }
-            },
-            title: {
-                display: true,
-                text: 'Your Weekly Progress',
-                color: '#ffffff' // White text for title
-            }
-        },
-        scales: {
-            x: {
-                ticks: {
-                    color: '#ffffff' // White text for x-axis
-                },
-                grid: {
-                    color: '#555555' // Subtle grid lines
-                }
-            },
-            y: {
-                ticks: {
-                    color: '#ffffff' // White text for y-axis
-                },
-                grid: {
-                    color: '#555555' // Subtle grid lines
-                }
-            }
-        }
-    };
-
-    // Render Progress Over Time chart
-    const progressCtx = document.getElementById('progressChart').getContext('2d');
-    new Chart(progressCtx, {
-        type: 'line',
-        data: progressData,
-        options: progressOptions
-    });
-
-    // Data for Drill Distribution chart
-    const drillData = {
-        labels: {{ drill_types|tojson }},
-        datasets: [{
-            data: {{ drill_counts|tojson }},
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)'
-            ],
-            borderColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)'
-            ],
-            borderWidth: 1,
-        }]
-    };
-
-    // Options for Drill Distribution chart
-    const drillOptions = {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: 'top',
-                labels: {
-                    color: '#ffffff' // White text for legend
-                }
-            },
-            title: {
-                display: true,
-                text: 'Drill Distribution',
-                color: '#ffffff' // White text for title
-            }
-        }
-    };
-
-    // Render Drill Distribution chart
-    const drillCtx = document.getElementById('drillDistributionChart').getContext('2d');
-    new Chart(drillCtx, {
-        type: 'pie',
-        data: drillData,
-        options: drillOptions
-    });
-    </script>
-<script>
-    let drillOffset = 0;
-    const drillLimit = 7;
-async function loadDrills() {
-    try {
-        const response = await fetch(`/training_drills/{{ member.id }}?limit=${drillLimit}&offset=${drillOffset}`);
-        const data = await response.json();
-        const tableBody = document.querySelector('#trainingDrillsTable tbody');
-
-        data.drills.forEach(drill => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${drill.date}</td>
-                <td>${drill.drill}</td>
-                <td>${drill.duration}</td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        drillOffset += drillLimit;
-        if (!data.has_more) {
-            document.getElementById('loadMoreDrills').style.display = 'none';
-        }
-
-        // Re-sort the table if a column is already sorted
-        const sortedHeader = document.querySelector('#trainingDrillsTable thead th[data-sort="desc"], #trainingDrillsTable thead th[data-sort="asc"]');
-        if (sortedHeader) {
-            const columnIndex = Array.from(sortedHeader.parentElement.children).indexOf(sortedHeader);
-            sortTable('trainingDrillsTable', columnIndex);
-        }
-    } catch (error) {
-        console.error('Error loading drills:', error);
+if (!times5k || times5k.length === 0) {
+  progressCanvas.style.display = 'none';
+  progressEmptyMsg.style.display = 'block';
+} else {
+  new Chart(progressCanvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: dates5k,
+      datasets: [{
+        label: '5km Time (min)',
+        data: times5k,
+        borderWidth: 2, fill: true,
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        tension: 0.25, pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top', labels: { color: '#ffffff' } },
+        title: { display: true, text: '5km Personal Record (lower is better)', color: '#ffffff' },
+        tooltip: { callbacks: { label: (ctx)=>` ${ctx.parsed.y.toFixed(2)} min` } }
+      },
+      scales: {
+        x: { ticks:{color:'#ffffff'}, grid:{color:'#555555'} },
+        y: { reverse:true, ticks:{color:'#ffffff'}, grid:{color:'#555555'} }
+      }
     }
+  });
 }
-
-    document.getElementById('loadMoreDrills').addEventListener('click', loadDrills);
-
-    // Load the first set of drills on page load
-    loadDrills();
 </script>
+
 <script>
-    let offset = 0; // Track the current offset
-    const limit = 7; // Number of rows to fetch at a time
-    const memberId = {{ member.id }}; // Replace with the member's ID dynamically
+// Drill distribution (empty-state aware)
+const drillLabels = {{ drill_types|tojson }};
+const drillCounts = {{ drill_counts|tojson }};
+const drillCanvas = document.getElementById('drillDistributionChart');
+const drillEmptyMsg = document.getElementById('drillEmptyMsg');
+const totalDrills = (drillCounts || []).reduce((a,b)=>a+(+b||0), 0);
+
+if (!totalDrills) {
+  drillCanvas.style.display = 'none';
+  drillEmptyMsg.style.display = 'block';
+} else {
+  new Chart(drillCanvas.getContext('2d'), {
+    type: 'pie',
+    data: {
+      labels: drillLabels,
+      datasets: [{
+        data: drillCounts,
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.2)','rgba(54, 162, 235, 0.2)','rgba(255, 206, 86, 0.2)',
+          'rgba(75, 192, 192, 0.2)','rgba(153, 102, 255, 0.2)'
+        ],
+        borderColor: [
+          'rgba(255, 99, 132, 1)','rgba(54, 162, 235, 1)','rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)','rgba(153, 102, 255, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top', labels: { color: '#ffffff' } },
+        title: { display: true, text: 'Drill Distribution', color: '#ffffff' }
+      }
+    }
+  });
+}
+</script>
+
+<script>
+// Record history table (empty-state aware)
+let offset = 0;
+const limit = 7;
 
 async function loadRecordHistory() {
-    try {
-        const response = await fetch(`/record_history/{{ member.id }}?limit=${limit}&offset=${offset}`);
-        const data = await response.json();
-        const tableBody = document.querySelector('#recordHistoryTable tbody');
+  try {
+    const response = await fetch(`/record_history/{{ member.id }}?limit=${limit}&offset=${offset}`);
+    const data = await response.json();
+    const table = document.getElementById('recordHistoryTable');
+    const tableBody = table.querySelector('tbody');
+    const viewMoreBtn = document.getElementById('viewMoreRecords');
+    const emptyMsg = document.getElementById('recordsEmptyMsg');
 
-        data.records.forEach(record => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${record.distance}</td>
-                <td>${record.time}</td>
-                <td>${record.date}</td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        offset += limit;
-        if (!data.has_more) {
-            document.getElementById('viewMoreRecords').style.display = 'none';
-        }
-
-        // Re-sort the table if a column is already sorted
-        const sortedHeader = document.querySelector('#recordHistoryTable thead th[data-sort="desc"], #recordHistoryTable thead th[data-sort="asc"]');
-        if (sortedHeader) {
-            const columnIndex = Array.from(sortedHeader.parentElement.children).indexOf(sortedHeader);
-            sortTable('recordHistoryTable', columnIndex);
-        }
-    } catch (error) {
-        console.error('Error loading record history:', error);
+    if (offset === 0 && (!data.records || data.records.length === 0)) {
+      table.style.display = 'none';
+      viewMoreBtn.style.display = 'none';
+      emptyMsg.style.display = 'block';
+      return;
     }
+
+    data.records.forEach(record => {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${record.time}</td><td>${record.date}</td>`;
+      tableBody.appendChild(row);
+    });
+
+    offset += limit;
+    if (!data.has_more) viewMoreBtn.style.display = 'none';
+
+    const sortedHeader = document.querySelector('#recordHistoryTable thead th[data-sort="desc"], #recordHistoryTable thead th[data-sort="asc"]');
+    if (sortedHeader) {
+      const columnIndex = Array.from(sortedHeader.parentElement.children).indexOf(sortedHeader);
+      sortTable('recordHistoryTable', columnIndex);
+    }
+  } catch (error) {
+    console.error('Error loading record history:', error);
+  }
+}
+document.addEventListener('DOMContentLoaded', loadRecordHistory);
+document.getElementById('viewMoreRecords').addEventListener('click', loadRecordHistory);
+</script>
+
+<!-- FullCalendar -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const calendarEl = document.getElementById('drillCalendar');
+  const calendarEmptyMsg = document.getElementById('calendarEmptyMsg');
+
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    height: 'auto',
+    firstDay: 1,
+    headerToolbar: { left: '', center: 'title', right: '' },
+    dayMaxEventRows: 3,
+    eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+    events: { url: '/training_drills_events/{{ member.id }}', failure: () => console.error('Failed to load drills.') },
+    dateClick(info) {
+      const dateInput = document.getElementById('drillDate');
+      if (dateInput) dateInput.value = info.dateStr;
+      const modal = new bootstrap.Modal(document.getElementById('addDrillModal'));
+      modal.show();
+    },
+    eventsSet(events) {
+      calendarEmptyMsg.style.display = (Array.isArray(events) && events.length === 0) ? 'block' : 'none';
+    }
+  });
+
+  calendar.render();
+
+  const addDrillForm = document.querySelector('#addDrillModal form');
+  if (addDrillForm) {
+    addDrillForm.addEventListener('submit', function() {
+      setTimeout(() => calendar.refetchEvents(), 400);
+    });
+  }
+});
+</script>
+
+<script>
+// Sleep chart (empty-state aware + safe re-render)
+const sleepCanvas   = document.getElementById('sleepChart');
+const sleepEmptyMsg = document.getElementById('sleepEmptyMsg');
+
+async function renderSleepChart() {
+  try {
+    // reset visibility first
+    sleepEmptyMsg.style.display = 'none';
+    sleepCanvas.style.display = '';
+
+    const res = await fetch('/sleep_series/{{ member.id }}');
+    if (!res.ok) throw new Error('fetch failed');
+    const series = await res.json();
+
+    if (!Array.isArray(series) || series.length === 0) {
+      sleepCanvas.style.display = 'none';
+      sleepEmptyMsg.style.display = 'block';
+      return;
+    }
+
+    const labels = series.map(s => s.date);
+    const hours  = series.map(s => s.hours);
+
+    if (window._sleepChart) window._sleepChart.destroy();
+
+    window._sleepChart = new Chart(sleepCanvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Hours Slept', data: hours, borderWidth: 2, fill: true,
+          backgroundColor: 'rgba(153,102,255,.2)', borderColor: 'rgba(153,102,255,1)',
+          tension: .25, pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top', labels: { color: '#ffffff' } },
+          title: { display: true, text: 'Sleep (hrs) • last entries', color: '#ffffff' }
+        },
+        scales: {
+          x: { ticks:{color:'#ffffff'}, grid:{color:'#555555'} },
+          y: { ticks:{color:'#ffffff'}, grid:{color:'#555555'}, suggestedMin:4, suggestedMax:10 }
+        }
+      }
+    });
+  } catch (e) {
+    console.error(e);
+    sleepCanvas.style.display = 'none';
+    sleepEmptyMsg.style.display = 'block';
+    sleepEmptyMsg.textContent = 'Failed to load sleep chart.';
+  }
+}
+</script>
+
+<script>
+// Sleep table (robust empty-state handling)
+let sleepOffset = 0;
+const sleepLimit = 14;
+
+async function loadSleepTable() {
+  const tbody       = document.querySelector('#sleepTable tbody');
+  const loadMoreBtn = document.getElementById('loadMoreSleep');
+//  const emptyMsg    = document.getElementById('sleepTableEmptyMsg');
+  const table       = document.getElementById('sleepTable');
+  const wrapper     = document.getElementById('sleepTableWrapper');
+
+  try {
+    // reset before fetch (we'll decide visibility after we know results)
+//    emptyMsg.style.display = 'none';
+    wrapper.style.display  = 'none';
+
+    const res = await fetch(`/sleep_logs/{{ member.id }}?limit=${sleepLimit}&offset=${sleepOffset}`);
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    const logs = Array.isArray(data.logs) ? data.logs : [];
+
+    // First page & empty -> show only empty message
+    if (sleepOffset === 0 && logs.length === 0) {
+      table.style.display = 'none';
+      loadMoreBtn.style.display = 'none';
+//      emptyMsg.style.display = 'flex'; // centered
+      return;
+    }
+
+    // If later pages return empty, just hide the button; keep existing table visible
+    if (sleepOffset > 0 && logs.length === 0) {
+      loadMoreBtn.style.display = 'none';
+      wrapper.style.display = 'block';
+      return;
+    }
+
+    // We have rows — show table, hide empty message
+    logs.forEach(r => {
+      const tr = document.createElement('tr');
+      const hrs = (r.duration_minutes/60).toFixed(2);
+      tr.innerHTML = `
+        <td>${r.date}</td>
+        <td>${r.bedtime}</td>
+        <td>${r.waketime}</td>
+        <td>${hrs}</td>
+        <td>${r.quality ?? '—'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    wrapper.style.display = 'block';
+    table.style.display   = '';
+    emptyMsg.style.display = 'none';
+
+    sleepOffset += sleepLimit;
+    if (!data.has_more) loadMoreBtn.style.display = 'none';
+  } catch (e) {
+    console.error('Error loading sleep logs', e);
+    // If there are already rows, keep the table; otherwise show empty
+    const hasRows = document.querySelector('#sleepTable tbody').children.length > 0;
+    if (!hasRows) {
+      document.getElementById('sleepTable').style.display = 'none';
+      document.getElementById('loadMoreSleep').style.display = 'none';
+      document.getElementById('sleepTableEmptyMsg').style.display = 'flex';
+    } else {
+      wrapper.style.display = 'block';
+        document.getElementById('sleepTableEmptyMsg').style.display = 'none';
+    }
+  }
 }
 
-    // Load the first set of records on page load
-    document.addEventListener('DOMContentLoaded', loadRecordHistory);
+// Single on-load init
+document.addEventListener('DOMContentLoaded', () => {
+  renderSleepChart();
+  loadSleepTable();
+  document.getElementById('loadMoreSleep').addEventListener('click', loadSleepTable);
+});
+</script>
 
-    // Load more records when the button is clicked
-    document.getElementById('viewMoreRecords').addEventListener('click', loadRecordHistory);
+<script>
+// Goal ring calc
+(function () {
+  const card = document.getElementById('goalCard');
+  if (!card) return;
 
+  const best = parseFloat(card.dataset.best);
+  const target = parseFloat(card.dataset.target);
+
+  const radial = document.getElementById('goalRadial');
+  const pctEl  = document.getElementById('goalPct');
+  const msgEl  = document.getElementById('goalMessage');
+
+  let pct = 0;
+  if (!isNaN(best) && !isNaN(target) && best > 0 && target > 0) {
+    pct = Math.min(100, Math.max(0, (target / best) * 100));
+    pctEl.textContent = `${pct.toFixed(0)}%`;
+    radial.style.setProperty('--value', pct.toFixed(2));
+
+    const delta = (best - target);
+    if (delta <= 0) {
+      msgEl.textContent = `Amazing—you're at or under your target! (${delta.toFixed(2)} min)`;
+    } else if (pct >= 75) {
+      msgEl.textContent = `Close! Only ${delta.toFixed(2)} min from your target. Keep pushing.`;
+    } else {
+      msgEl.textContent = `You're ${delta.toFixed(2)} min from your target. Build consistency and sharpen speed work.`;
+    }
+  } else {
+    radial.style.setProperty('--value', 0);
+    pctEl.textContent = '0%';
+    if (!msgEl.textContent.trim()) {
+      msgEl.textContent = 'Set a target and log a 5k to see your progress.';
+    }
+  }
+})();
 </script>
 
 {% endblock %}

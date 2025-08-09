@@ -65,7 +65,7 @@
     <div class="container d-flex align-items-center justify-content-between position-relative">
 
       <div class="logo">
-        <h1 class="text-light"><a href="index.html">Runlogix</a></h1>
+        <h1 class="text-light"><a href="{{url_for('index')}}">Runlogix</a></h1>
         <!-- Uncomment below if you prefer to use an image logo -->
         <!-- <a href="index.html"><img src="assets/img/logo.png" alt="" class="img-fluid"></a>-->
       </div>
@@ -74,6 +74,8 @@
         <ul>
           <li><a class="nav-link scrollto" href="#about">About Us</a></li>
           <li><a class="nav-link scrollto" href="#deliverables">Features</a></li>
+                    <li><a class="nav-link scrollto" href="{{url_for('gallery')}}">Gallery</a></li>
+
                 <li>
 <a href="{{url_for('main')}}"
    class="btn"

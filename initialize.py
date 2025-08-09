@@ -1,61 +1,68 @@
-import sqlite3
-from random import randint, uniform
-from faker import Faker
-from datetime import datetime, timedelta
+# seed_members.py
+import sqlite3, argparse, os
 
-def add_mock_data():
-    conn = sqlite3.connect('crosscountry.db')
-    cursor = conn.cursor()
+def conn(db):
+    c = sqlite3.connect(db); c.row_factory = sqlite3.Row; return c
 
-    fake = Faker()
+def ensure_schema(db):
+    c = conn(db); cur = c.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS users(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE, email TEXT UNIQUE, password TEXT,
+      fullname TEXT, role TEXT)""")
+    cur.execute("""CREATE TABLE IF NOT EXISTS team_members(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL, role TEXT NOT NULL,
+      email TEXT NOT NULL, image TEXT,
+      target_time_5km REAL, goal_progress TEXT, goal_target TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id))""")
+    c.commit(); c.close()
 
-    # Add mock users
-    for _ in range(3):
-        name = fake.first_name()
-        email = fake.email()
-        password = "password123"
-        cursor.execute('''
-            INSERT OR IGNORE INTO users (name, email, password) VALUES (?, ?, ?)
-        ''', (name, email, password))
+def get_user_id(db, username):
+    c = conn(db)
+    u = c.execute("SELECT id FROM users WHERE name=?", (username,)).fetchone()
+    if not u:
+        c.execute("""INSERT INTO users(name,email,password,fullname,role)
+                     VALUES(?,?,?,?,?)""",
+                  (username, f"{username.lower()}@example.com", "pass",
+                   username.replace("_"," "), "Manager"))
+        c.commit()
+        u = c.execute("SELECT id FROM users WHERE name=?", (username,)).fetchone()
+    c.close()
+    return u["id"]
 
-    # Get all user IDs
-    user_ids = [row[0] for row in cursor.execute('SELECT id FROM users').fetchall()]
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--db", default="crosscountry.db")
+    ap.add_argument("--user", default="Manager1", help="attach members to this username")
+    ap.add_argument("--count", type=int, default=5, help="how many members to add")
+    args = ap.parse_args()
 
-    # Add mock team members
-    for user_id in user_ids:
-        member_name = fake.name()
-        role = "Runner" if randint(0, 1) else "Coach"
-        email = fake.email()
-        cursor.execute('''
-            INSERT OR IGNORE INTO team_members (user_id, name, role, email) VALUES (?, ?, ?, ?)
-        ''', (user_id, member_name, role, email))
+    ensure_schema(args.db)
+    uid = get_user_id(args.db, args.user)
 
-    # Get all member IDs
-    member_ids = [row[0] for row in cursor.execute('SELECT id FROM team_members').fetchall()]
+    names = [
+        "Alex Kim","Jordan Lee","Sam Park","Morgan Choi","Taylor Yu",
+        "Riley Han","Jamie Seo","Casey Min","Avery Shin","Drew Park"
+    ]
+    roles = ["Runner","Runner","Runner","Runner","Runner","Runner","Runner","Runner","Runner","Runner"]
 
-    # Add mock training drills
-    for member_id in member_ids:
-        for _ in range(15):  # Each member has 15 drills
-            date = (datetime.now() - timedelta(days=randint(1, 100))).strftime('%Y-%m-%d')
-            drill = fake.random_element(elements=("Endurance Run", "Interval Training", "Hill Repeats", "Speed Training"))
-            duration = randint(20, 90)  # Duration between 20 and 90 minutes
-            cursor.execute('''
-                INSERT INTO training_drills (member_id, date, drill, duration) VALUES (?, ?, ?, ?)
-            ''', (member_id, date, drill, duration))
+    c = conn(args.db)
+    existing_emails = {r["email"] for r in c.execute(
+        "SELECT email FROM team_members WHERE user_id=?", (uid,)).fetchall()}
 
-    # Add mock best scores
-    for member_id in member_ids:
-        for _ in range(10):  # Each member has 10 records
-            distance = round(uniform(5.0, 15.0), 2)  # Distance between 5 and 15 km
-            time = round(uniform(15.0, 90.0), 2)  # Time between 15 and 90 minutes
-            date = (datetime.now() - timedelta(days=randint(1, 100))).strftime('%Y-%m-%d')
-            cursor.execute('''
-                INSERT INTO best_scores (member_id, distance, time, date) VALUES (?, ?, ?, ?)
-            ''', (member_id, distance, time, date))
+    added = 0
+    for i, nm in enumerate(names):
+        if added >= args.count: break
+        email = nm.lower().replace(" ",".") + "@example.com"
+        if email in existing_emails: continue
+        c.execute("""INSERT INTO team_members(user_id,name,role,email,image,target_time_5km)
+                     VALUES(?,?,?,?,?,?)""",
+                  (uid, nm, roles[i], email, None, None))
+        added += 1
+    c.commit(); c.close()
+    print(f"Added {added} member(s) to user {args.user}.")
 
-    conn.commit()
-    conn.close()
-    print("Mock data added successfully!")
-
-
-add_mock_data()
+if __name__ == "__main__":
+    main()
